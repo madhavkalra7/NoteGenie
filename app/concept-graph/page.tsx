@@ -21,7 +21,12 @@ export default function ConceptGraphPage() {
 
   useEffect(() => {
     if (isReady && state.concepts.length > 0) {
-      generateConceptGraph({ concepts: state.concepts })
+      // Convert DbConcept to Concept format (handle null -> undefined)
+      const concepts = state.concepts.map(c => ({
+        ...c,
+        category: c.category ?? undefined
+      }))
+      generateConceptGraph({ concepts })
         .then(data => setGraphData(data))
     }
   }, [state.concepts, isReady])
