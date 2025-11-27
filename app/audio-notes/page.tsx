@@ -96,15 +96,14 @@ export default function AudioNotesPage() {
 
       setResult(audioResult)
       
-      // Save to context
-      const newSummary = {
-        id: `summary-audio-${Date.now()}`,
+      // Save to context with correct field names (snake_case for DB)
+      await addSummary({
         title: 'Lecture Notes from Audio',
-        ...audioResult.summary,
-        rawText: audioResult.cleanedText,
-        createdAt: new Date(),
-      }
-      addSummary(newSummary)
+        raw_text: audioResult.cleanedText,
+        one_liner: audioResult.summary.oneLiner,
+        short_summary: audioResult.summary.shortSummary,
+        detailed_bullets: audioResult.summary.detailedBullets,
+      })
     } catch (error) {
       console.error('Error processing audio:', error)
     } finally {

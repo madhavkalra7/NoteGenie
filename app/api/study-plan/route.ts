@@ -54,12 +54,15 @@ Respond with ONLY valid JSON. No other text.`
 
     // Add dates and unique IDs
     const today = new Date()
-    result.plan = result.plan.map((task, index) => ({
-      ...task,
-      id: `task-${Date.now()}-${index}`,
-      date: new Date(today.getTime() + (task.day - 1) * 24 * 60 * 60 * 1000),
-      completed: false
-    }))
+    result.plan = result.plan.map((task, index) => {
+      const taskDate = new Date(today.getTime() + (task.day - 1) * 24 * 60 * 60 * 1000)
+      return {
+        ...task,
+        id: `task-${Date.now()}-${index}`,
+        date: taskDate.toISOString().split('T')[0], // Format as YYYY-MM-DD string
+        completed: false
+      }
+    })
 
     return NextResponse.json(result)
   } catch (error) {
