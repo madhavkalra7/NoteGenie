@@ -43,7 +43,7 @@ export interface Summary {
 export interface StudyTask {
   id: string;
   day: number;
-  date: Date;
+  date: string; // ISO date string for DB compatibility
   topics: string[];
   duration: number; // in minutes
   priority: 'high' | 'medium' | 'low';
