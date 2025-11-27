@@ -1,53 +1,39 @@
 import {
   ConceptExtractorInput,
   ConceptExtractorOutput,
-  Concept,
 } from './types'
 
 /**
  * Concept Extractor Agent
- * Extracts keywords, concepts, definitions, formulas from text
+ * Extracts keywords, concepts, definitions, formulas from text using OpenAI API
  */
 export async function extractConcepts(
   input: ConceptExtractorInput
 ): Promise<ConceptExtractorOutput> {
-  // TODO: Call AI API to extract concepts intelligently
-  
-  await new Promise(resolve => setTimeout(resolve, 1200))
+  console.log('[ConceptExtractorAgent] Extracting concepts...')
 
-  // Mock concept extraction - in production, AI would identify these
-  const mockConcepts: Concept[] = [
-    {
-      id: `concept-${Date.now()}-1`,
-      term: 'Machine Learning',
-      definition: 'A subset of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.',
-      difficulty: 'medium',
-      category: 'AI/Technology',
-    },
-    {
-      id: `concept-${Date.now()}-2`,
-      term: 'Neural Networks',
-      definition: 'Computing systems inspired by biological neural networks that constitute animal brains.',
-      difficulty: 'hard',
-      category: 'AI/Technology',
-    },
-    {
-      id: `concept-${Date.now()}-3`,
-      term: 'Supervised Learning',
-      definition: 'A type of machine learning where the model is trained on labeled data.',
-      difficulty: 'easy',
-      category: 'AI/Technology',
-    },
-    {
-      id: `concept-${Date.now()}-4`,
-      term: 'Gradient Descent',
-      definition: 'An optimization algorithm used to minimize the cost function in machine learning models.',
-      difficulty: 'hard',
-      category: 'Algorithms',
-    },
-  ]
+  try {
+    const response = await fetch('/api/extract-concepts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: input.text,
+      }),
+    })
 
-  return {
-    concepts: mockConcepts,
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to extract concepts')
+    }
+
+    const result = await response.json()
+    return {
+      concepts: result.concepts,
+    }
+  } catch (error) {
+    console.error('[ConceptExtractorAgent] Error:', error)
+    throw error
   }
 }

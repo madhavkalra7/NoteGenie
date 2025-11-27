@@ -1,13 +1,56 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { useApp } from '@/context/AppContext'
 
 export default function SettingsPage() {
-  const { clearAll } = useApp()
+  const router = useRouter()
+  const { clearAll, state, isReady, signOut } = useApp()
+
+  // Redirect to login if not authenticated (only after ready)
+  useEffect(() => {
+    if (isReady && !state.user) {
+      router.push('/auth/login')
+    }
+  }, [isReady, state.user, router])
+
+  // Show loading until ready
+  if (!isReady) {
+    return (
+      <PageLayout>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading settings...</p>
+          <style jsx>{`
+            .loading-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 400px;
+              gap: 20px;
+            }
+            .loading-spinner {
+              width: 50px;
+              height: 50px;
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #000;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </PageLayout>
+    )
+  }
 
   const handleClearData = () => {
     if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
@@ -17,7 +60,27 @@ export default function SettingsPage() {
   }
 
   const handleExportData = () => {
-    alert('Data export feature coming soon!')
+    // Export data as JSON
+    const data = {
+      summaries: state.summaries,
+      flashcards: state.flashcards,
+      concepts: state.concepts,
+      questions: state.questions,
+      studyPlan: state.studyPlan,
+      exportedAt: new Date().toISOString()
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `notegenie-export-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleLogout = async () => {
+    await signOut()
+    router.push('/auth/login')
   }
 
   return (
@@ -46,6 +109,26 @@ export default function SettingsPage() {
               </div>
               <Button variant="danger" onClick={handleClearData}>
                 Clear Everything 🗑️
+              </Button>
+            </div>
+          </Card>
+
+          {/* Account */}
+          <Card title="Account">
+            <div className="setting-item">
+              <div className="setting-info">
+                <h3>Email</h3>
+                <p>{state.user?.email}</p>
+              </div>
+            </div>
+
+            <div className="setting-item">
+              <div className="setting-info">
+                <h3>Log Out</h3>
+                <p>Sign out of your account on this device.</p>
+              </div>
+              <Button variant="outline" onClick={handleLogout}>
+                Log Out 🚪
               </Button>
             </div>
           </Card>

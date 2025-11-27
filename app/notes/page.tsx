@@ -1,28 +1,69 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import AgentTimeline from '@/components/AgentTimeline'
-import ConceptTag from '@/components/ConceptTag'
-import Flashcard from '@/components/Flashcard'
 import { useApp } from '@/context/AppContext'
 import { summarizeNotes } from '@/agents/summarizerAgent'
 import { extractConcepts } from '@/agents/conceptExtractorAgent'
-import { generateFlashcards } from '@/agents/flashcardAgent'
-import { generateQuestions } from '@/agents/questionMakerAgent'
 import { detectDifficulty } from '@/agents/difficultyDetectorAgent'
-import { extractHandwriting } from '@/agents/handwritingOCRAgent'
 
 export default function NotesPage() {
-  const { addSummary, addConcepts, addFlashcards, addQuestions } = useApp()
+  const router = useRouter()
+  const { addSummary, addConcepts, state, isReady } = useApp()
   
   const [noteText, setNoteText] = useState('')
+  const [noteTitle, setNoteTitle] = useState('')
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [agentSteps, setAgentSteps] = useState<any[]>([])
+
+  // Redirect to login if not authenticated (only after ready)
+  useEffect(() => {
+    if (isReady && !state.user) {
+      router.push('/auth/login')
+    }
+  }, [isReady, state.user, router])
+
+  // Show loading until ready
+  if (!isReady) {
+    return (
+      <PageLayout>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading...</p>
+          <style jsx>{`
+            .loading-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 400px;
+              gap: 20px;
+              font-family: var(--font-heading);
+              font-size: 1.5rem;
+            }
+            .loading-spinner {
+              width: 50px;
+              height: 50px;
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #000;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </PageLayout>
+    )
+  }
 
   const handleSummarize = async () => {
     if (!noteText.trim()) return
@@ -30,12 +71,10 @@ export default function NotesPage() {
     setProcessing(true)
     setResult(null)
 
-    // Initialize agent timeline
+    // Initialize agent timeline - Only summarize and extract concepts
     const steps: { agent: string; status: 'pending' | 'processing' | 'completed'; icon: string }[] = [
       { agent: 'Summarizer', status: 'processing', icon: '📝' },
       { agent: 'Concept Extractor', status: 'pending', icon: '🔍' },
-      { agent: 'Flashcard Generator', status: 'pending', icon: '🔖' },
-      { agent: 'Question Maker', status: 'pending', icon: '❓' },
       { agent: 'Difficulty Detector', status: 'pending', icon: '🎯' },
     ]
     setAgentSteps([...steps])
@@ -55,41 +94,45 @@ export default function NotesPage() {
 
       // Step 3: Detect Difficulty
       const { taggedConcepts } = await detectDifficulty({ concepts: rawConcepts })
-      steps[4].status = 'completed'
-      setAgentSteps([...steps])
-
-      // Step 4: Generate Flashcards
-      const { flashcards } = await generateFlashcards({ concepts: taggedConcepts })
       steps[2].status = 'completed'
-      steps[3].status = 'processing'
       setAgentSteps([...steps])
 
-      // Step 5: Generate Questions
-      const { questions } = await generateQuestions({ 
-        concepts: taggedConcepts, 
-        summary: summary.shortSummary 
+      // Save to database with correct field names
+      const title = noteTitle.trim() || 'My Notes'
+      
+      console.log('💾 Saving summary to database...')
+      
+      // Add summary first to get the ID
+      const savedSummary = await addSummary({
+        title: title,
+        raw_text: noteText,
+        one_liner: summary.oneLiner,
+        short_summary: summary.shortSummary,
+        detailed_bullets: summary.detailedBullets,
       })
-      steps[3].status = 'completed'
-      setAgentSteps([...steps])
 
-      // Save to context
-      const newSummary = {
-        id: `summary-${Date.now()}`,
-        title: 'My Notes',
-        ...summary,
-        rawText: noteText,
-        createdAt: new Date(),
+      console.log('💾 Saved summary result:', savedSummary)
+
+      if (!savedSummary) {
+        console.error('❌ Failed to save summary to database')
       }
-      addSummary(newSummary)
-      addConcepts(taggedConcepts)
-      addFlashcards(flashcards)
-      addQuestions(questions)
+
+      const summaryId = savedSummary?.id
+
+      // Add concepts with correct format
+      const dbConcepts = taggedConcepts.map((c: any) => ({
+        summary_id: summaryId || null,
+        term: c.term,
+        definition: c.definition,
+        category: c.category || null,
+        difficulty: c.difficulty || 'medium',
+      }))
+      await addConcepts(dbConcepts, summaryId || undefined)
 
       setResult({
         summary,
         concepts: taggedConcepts,
-        flashcards,
-        questions,
+        summaryId: savedSummary?.id,
       })
     } catch (error) {
       console.error('Error processing notes:', error)
@@ -98,16 +141,35 @@ export default function NotesPage() {
     }
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setProcessing(true)
     try {
-      const { extractedText } = await extractHandwriting({ imageFile: file })
-      setNoteText(extractedText)
+      // Send file to server for extraction
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/extract-pdf', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to extract text')
+      }
+
+      if (data.text && data.text.trim()) {
+        setNoteText(data.text)
+      } else {
+        alert('Could not extract text from file. The file might be empty or image-based.')
+      }
     } catch (error) {
-      console.error('Error extracting handwriting:', error)
+      console.error('Error processing file:', error)
+      alert('Error processing file: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setProcessing(false)
     }
@@ -117,13 +179,40 @@ export default function NotesPage() {
     <PageLayout>
       <div className="notes-page">
         <h1 className="page-title">Summarize & Analyze Notes</h1>
-        <p className="page-subtitle">Upload or paste your notes to extract summaries, concepts, flashcards, and quiz questions</p>
+        <p className="page-subtitle">Upload PDF or text files, or paste your notes to extract summaries, concepts, flashcards, and quiz questions</p>
 
         {/* Input Section */}
         <Card className="input-card">
           <h2 className="section-title">Input Your Notes</h2>
           
           <div className="input-options">
+            <div className="input-group">
+              <label htmlFor="note-title">Note Title:</label>
+              <input
+                id="note-title"
+                type="text"
+                className="input title-input"
+                placeholder="Give your notes a name..."
+                value={noteTitle}
+                onChange={(e) => setNoteTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="upload-section">
+              <label className="upload-label">📁 Upload File:</label>
+              <input
+                type="file"
+                accept=".pdf,.txt,.md,.rtf,text/plain,application/pdf"
+                onChange={handleFileUpload}
+                className="file-input"
+              />
+              <p className="upload-hint">Supports PDF, TXT, MD files</p>
+            </div>
+
+            <div className="divider">
+              <span>OR</span>
+            </div>
+
             <div className="input-group">
               <label htmlFor="note-text">Paste Text:</label>
               <textarea
@@ -134,17 +223,6 @@ export default function NotesPage() {
                 onChange={(e) => setNoteText(e.target.value)}
                 rows={10}
               />
-            </div>
-
-            <div className="upload-section">
-              <label className="upload-label">Or Upload Image:</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="file-input"
-              />
-              <p className="upload-hint">📸 Upload handwritten notes for OCR extraction</p>
             </div>
           </div>
 
@@ -196,54 +274,37 @@ export default function NotesPage() {
 
             {/* Concepts */}
             <Card>
-              <h2 className="section-title">🔍 Extracted Concepts</h2>
-              <div className="concepts-grid">
-                {result.concepts.map((concept: any) => (
-                  <ConceptTag key={concept.id} concept={concept} />
+              <h2 className="section-title">🔍 Extracted Concepts ({result.concepts.length})</h2>
+              <div className="concepts-list">
+                {result.concepts.map((concept: any, idx: number) => (
+                  <div key={idx} className="concept-item">
+                    <span className={`difficulty-dot ${concept.difficulty}`}></span>
+                    <strong>{concept.term}</strong>: {concept.definition}
+                  </div>
                 ))}
               </div>
             </Card>
 
-            {/* Flashcards Preview */}
+            {/* Next Steps */}
             <Card>
-              <h2 className="section-title">🔖 Generated Flashcards ({result.flashcards.length})</h2>
-              {result.flashcards.length > 0 && (
-                <div className="flashcard-preview">
-                  <Flashcard 
-                    question={result.flashcards[0].question}
-                    answer={result.flashcards[0].answer}
-                  />
-                  <p className="preview-note">
-                    Showing 1 of {result.flashcards.length} flashcards. 
-                    <a href="/flashcards"> View all →</a>
-                  </p>
-                </div>
-              )}
-            </Card>
-
-            {/* Questions Preview */}
-            <Card>
-              <h2 className="section-title">❓ Practice Questions ({result.questions.length})</h2>
-              <div className="questions-preview">
-                {result.questions.slice(0, 2).map((q: any, idx: number) => (
-                  <div key={q.id} className="question-item">
-                    <div className="question-header">
-                      <span className="question-number">Q{idx + 1}</span>
-                      <span className={`difficulty-badge ${q.difficulty}`}>{q.difficulty}</span>
-                    </div>
-                    <p className="question-text">{q.question}</p>
-                    {q.type === 'mcq' && q.options && (
-                      <ul className="options-list">
-                        {q.options.map((opt: string, i: number) => (
-                          <li key={i}>{String.fromCharCode(65 + i)}. {opt}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-                <p className="preview-note">
-                  <a href="/flashcards">Go to Quiz Mode →</a>
-                </p>
+              <h2 className="section-title">🚀 What's Next?</h2>
+              <p className="next-steps-intro">Your notes have been saved! Now you can:</p>
+              <div className="next-steps-grid">
+                <a href="/flashcards" className="next-step-card">
+                  <span className="next-step-icon">🔖</span>
+                  <span className="next-step-title">Generate Flashcards</span>
+                  <span className="next-step-desc">Create flashcards from these notes</span>
+                </a>
+                <a href="/study-plan" className="next-step-card">
+                  <span className="next-step-icon">📅</span>
+                  <span className="next-step-title">Study Plan</span>
+                  <span className="next-step-desc">Plan your study schedule</span>
+                </a>
+                <a href="/concept-graph" className="next-step-card">
+                  <span className="next-step-icon">🕸️</span>
+                  <span className="next-step-title">Concept Graph</span>
+                  <span className="next-step-desc">Visualize concept relationships</span>
+                </a>
               </div>
             </Card>
           </div>
@@ -295,19 +356,39 @@ export default function NotesPage() {
         .input-group label {
           font-weight: var(--font-weight-medium);
           color: var(--color-text-primary);
+          font-family: var(--font-heading);
+          font-size: 1.2rem;
+        }
+
+        .title-input {
+          font-family: var(--font-heading);
+          font-size: 1.3rem;
+          padding: 12px 16px;
+          border: 3px solid #000;
+          border-radius: 8px;
+          box-shadow: 3px 3px 0px 0px black;
+        }
+
+        .title-input:focus {
+          outline: none;
+          box-shadow: 5px 5px 0px 0px black;
+          transform: translate(-2px, -2px);
         }
 
         .upload-section {
-          padding: var(--spacing-lg);
-          background: var(--color-bg-secondary);
+          padding: var(--spacing-xl);
+          background: #fffef0;
           border-radius: var(--radius-md);
           text-align: center;
+          border: 3px dashed #000;
         }
 
         .upload-label {
-          font-weight: var(--font-weight-medium);
+          font-weight: var(--font-weight-bold);
           display: block;
           margin-bottom: var(--spacing-md);
+          font-family: var(--font-heading);
+          font-size: 1.3rem;
         }
 
         .file-input {
@@ -315,11 +396,37 @@ export default function NotesPage() {
           width: 100%;
           max-width: 300px;
           margin: 0 auto var(--spacing-sm);
+          padding: 10px;
+          border: 2px solid #000;
+          border-radius: 8px;
+          cursor: pointer;
         }
 
         .upload-hint {
           font-size: var(--font-size-sm);
           color: var(--color-text-muted);
+          font-family: var(--font-heading);
+        }
+
+        .divider {
+          display: flex;
+          align-items: center;
+          text-align: center;
+          margin: var(--spacing-md) 0;
+        }
+
+        .divider::before,
+        .divider::after {
+          content: '';
+          flex: 1;
+          border-bottom: 2px dashed #ccc;
+        }
+
+        .divider span {
+          padding: 0 var(--spacing-md);
+          font-family: var(--font-heading);
+          font-size: 1.2rem;
+          color: #999;
         }
 
         .timeline-section {
@@ -366,89 +473,85 @@ export default function NotesPage() {
           border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
         }
 
-        .concepts-grid {
+        .concepts-list {
           display: flex;
-          flex-wrap: wrap;
+          flex-direction: column;
+          gap: var(--spacing-sm);
+        }
+
+        .concept-item {
+          padding: var(--spacing-md);
+          background: var(--color-bg-secondary);
+          border-radius: var(--radius-md);
+          display: flex;
+          align-items: flex-start;
+          gap: var(--spacing-sm);
+        }
+
+        .difficulty-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          margin-top: 6px;
+          flex-shrink: 0;
+        }
+
+        .difficulty-dot.easy {
+          background: var(--color-easy);
+        }
+
+        .difficulty-dot.medium {
+          background: var(--color-medium);
+        }
+
+        .difficulty-dot.hard {
+          background: var(--color-hard);
+        }
+
+        .next-steps-intro {
+          margin-bottom: var(--spacing-lg);
+          color: var(--color-text-secondary);
+        }
+
+        .next-steps-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           gap: var(--spacing-md);
         }
 
-        .flashcard-preview,
-        .questions-preview {
+        .next-step-card {
           display: flex;
           flex-direction: column;
-          gap: var(--spacing-lg);
-        }
-
-        .preview-note {
-          text-align: center;
-          color: var(--color-text-muted);
-          font-size: var(--font-size-sm);
-        }
-
-        .preview-note a {
-          color: var(--color-accent);
-          font-weight: var(--font-weight-medium);
-        }
-
-        .question-item {
-          padding: var(--spacing-lg);
-          background: var(--color-bg-secondary);
-          border-radius: var(--radius-md);
-        }
-
-        .question-header {
-          display: flex;
-          justify-content: space-between;
           align-items: center;
-          margin-bottom: var(--spacing-md);
+          padding: var(--spacing-xl);
+          background: var(--color-bg-secondary);
+          border: 3px solid #000;
+          border-radius: var(--radius-md);
+          text-decoration: none;
+          transition: all var(--transition-fast);
+          box-shadow: 3px 3px 0px 0px black;
         }
 
-        .question-number {
-          font-weight: var(--font-weight-bold);
-          color: var(--color-accent);
-          font-size: var(--font-size-lg);
+        .next-step-card:hover {
+          transform: translate(-2px, -2px);
+          box-shadow: 5px 5px 0px 0px black;
         }
 
-        .difficulty-badge {
-          padding: var(--spacing-xs) var(--spacing-sm);
-          border-radius: var(--radius-full);
-          font-size: var(--font-size-xs);
+        .next-step-icon {
+          font-size: 2rem;
+          margin-bottom: var(--spacing-sm);
+        }
+
+        .next-step-title {
           font-weight: var(--font-weight-semibold);
-          text-transform: uppercase;
-        }
-
-        .difficulty-badge.easy {
-          background: rgba(123, 198, 126, 0.2);
-          color: var(--color-easy);
-        }
-
-        .difficulty-badge.medium {
-          background: rgba(255, 183, 77, 0.2);
-          color: var(--color-medium);
-        }
-
-        .difficulty-badge.hard {
-          background: rgba(229, 115, 115, 0.2);
-          color: var(--color-hard);
-        }
-
-        .question-text {
-          font-size: var(--font-size-base);
-          font-weight: var(--font-weight-medium);
           color: var(--color-text-primary);
-          margin-bottom: var(--spacing-md);
-        }
-
-        .options-list {
-          list-style: none;
-          padding: 0;
-        }
-
-        .options-list li {
-          padding: var(--spacing-sm) var(--spacing-md);
-          background: var(--color-card);
-          border-radius: var(--radius-sm);
           margin-bottom: var(--spacing-xs);
+        }
+
+        .next-step-desc {
+          font-size: var(--font-size-sm);
+          color: var(--color-text-muted);
+          text-align: center;
         }
 
         @keyframes fadeIn {

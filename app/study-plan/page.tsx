@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -8,11 +9,53 @@ import { useApp } from '@/context/AppContext'
 import { createStudyPlan } from '@/agents/studyPlanAgent'
 
 export default function StudyPlanPage() {
-  const { state, setStudyPlan } = useApp()
+  const router = useRouter()
+  const { state, isReady, setStudyPlan } = useApp()
   const [topics, setTopics] = useState('')
   const [timePerDay, setTimePerDay] = useState('60')
   const [daysUntilExam, setDaysUntilExam] = useState('14')
   const [generating, setGenerating] = useState(false)
+
+  // Redirect to login if not authenticated (only after ready)
+  useEffect(() => {
+    if (isReady && !state.user) {
+      router.push('/auth/login')
+    }
+  }, [isReady, state.user, router])
+
+  if (!isReady) {
+    return (
+      <PageLayout>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading study plan...</p>
+          <style jsx>{`
+            .loading-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 400px;
+              gap: 20px;
+              font-family: var(--font-body);
+            }
+            .loading-spinner {
+              width: 50px;
+              height: 50px;
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #000;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </PageLayout>
+    )
+  }
 
   const handleGenerate = async () => {
     const topicsList = topics.split(',').map(t => t.trim()).filter(t => t)

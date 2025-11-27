@@ -1,21 +1,64 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import { useApp } from '@/context/AppContext'
 import { generateConceptGraph } from '@/agents/conceptGraphAgent'
 
 export default function ConceptGraphPage() {
-  const { state } = useApp()
+  const router = useRouter()
+  const { state, isReady } = useApp()
   const [graphData, setGraphData] = useState<any>(null)
 
+  // Redirect to login if not authenticated (only after ready)
   useEffect(() => {
-    if (state.concepts.length > 0) {
+    if (isReady && !state.user) {
+      router.push('/auth/login')
+    }
+  }, [isReady, state.user, router])
+
+  useEffect(() => {
+    if (isReady && state.concepts.length > 0) {
       generateConceptGraph({ concepts: state.concepts })
         .then(data => setGraphData(data))
     }
-  }, [state.concepts])
+  }, [state.concepts, isReady])
+
+  if (!isReady) {
+    return (
+      <PageLayout>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading concepts...</p>
+          <style jsx>{`
+            .loading-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 400px;
+              gap: 20px;
+              font-family: var(--font-body);
+            }
+            .loading-spinner {
+              width: 50px;
+              height: 50px;
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #000;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </PageLayout>
+    )
+  }
 
   return (
     <PageLayout>

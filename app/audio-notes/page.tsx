@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -9,11 +10,19 @@ import { convertAudioToNotes } from '@/agents/audioToNotesAgent'
 import { useApp } from '@/context/AppContext'
 
 export default function AudioNotesPage() {
-  const { addSummary, addConcepts, addFlashcards } = useApp()
+  const router = useRouter()
+  const { addSummary, addConcepts, addFlashcards, state, isReady } = useApp()
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [processing, setProcessing] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [result, setResult] = useState<any>(null)
+
+  // Redirect to login if not authenticated (only after ready)
+  useEffect(() => {
+    if (isReady && !state.user) {
+      router.push('/auth/login')
+    }
+  }, [isReady, state.user, router])
 
   const steps = [
     { label: 'Transcribing Audio', icon: '🎤' },
@@ -21,6 +30,40 @@ export default function AudioNotesPage() {
     { label: 'Summarizing Content', icon: '📝' },
     { label: 'Generating Resources', icon: '✨' },
   ]
+
+  // Show loading until ready
+  if (!isReady) {
+    return (
+      <PageLayout>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading...</p>
+          <style jsx>{`
+            .loading-state {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 400px;
+              gap: 20px;
+            }
+            .loading-spinner {
+              width: 50px;
+              height: 50px;
+              border: 4px solid #f3f3f3;
+              border-top: 4px solid #000;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </PageLayout>
+    )
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

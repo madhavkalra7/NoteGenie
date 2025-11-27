@@ -7,23 +7,38 @@ import { summarizeNotes } from './summarizerAgent'
 /**
  * Audio to Notes Agent
  * Transcribes audio, cleans it, and structures into notes
+ * 
+ * Note: For full audio transcription, you would need to:
+ * 1. Upload audio to a service like OpenAI Whisper API
+ * 2. Get the transcription
+ * 3. Process and structure the notes
+ * 
+ * This implementation provides a framework - actual audio transcription
+ * requires additional API integration (e.g., OpenAI Whisper)
  */
 export async function convertAudioToNotes(
   input: AudioToNotesInput
 ): Promise<AudioToNotesOutput> {
-  // TODO: Call speech-to-text API (Whisper, Google Speech, etc.)
+  console.log('[AudioToNotesAgent] Processing audio file...')
+
+  // Note: Full implementation would require:
+  // 1. Uploading audio file to Whisper API
+  // 2. Getting transcription back
+  // For now, we'll show a message about this limitation
   
-  await new Promise(resolve => setTimeout(resolve, 2000))
+  const mockTranscription = `[Audio Transcription Feature]
+  
+To enable full audio transcription:
+1. This feature requires OpenAI Whisper API integration
+2. Audio files need to be uploaded to the API
+3. The transcription is then returned
 
-  // Mock transcription
-  const mockTranscription = `Um, so today we're going to talk about, like, machine learning, okay? 
-  So basically, um, machine learning is, you know, a subset of AI. 
-  It's like, basically the computer learns from data without being explicitly programmed, right? 
-  So, um, there are different types, like supervised learning where you have labeled data, 
-  and unsupervised learning where, um, the data isn't labeled. 
-  Neural networks are, like, inspired by the human brain and, um, they're really powerful for complex tasks.`
+For now, please use the text input method or copy-paste your lecture notes.
 
-  // Clean filler words
+Example of what transcription would look like:
+"Today we discussed machine learning fundamentals. Machine learning is a subset of AI that enables systems to learn from data. There are different types including supervised learning with labeled data and unsupervised learning for unlabeled data."`
+
+  // Clean filler words (would work on real transcription)
   const fillerWords = ['um', 'uh', 'like', 'you know', 'basically', 'okay', 'right', 'so,']
   let cleanedText = mockTranscription
   fillerWords.forEach(filler => {
@@ -34,17 +49,17 @@ export async function convertAudioToNotes(
   // Structure into proper notes
   const structuredNotes = cleanedText
     .split('.')
-    .filter(s => s.trim().length > 0)
+    .filter(s => s.trim().length > 10)
     .map(sentence => `• ${sentence.trim()}.`)
     .join('\n')
 
   // Generate summary using summarizer agent
-  const summary = await summarizeNotes({ rawText: cleanedText })
+  const summary = await summarizeNotes({ rawText: cleanedText, title: 'Audio Notes' })
 
   return {
     transcription: mockTranscription,
     cleanedText,
-    structuredNotes: `# Lecture Notes\n\n${structuredNotes}`,
+    structuredNotes: `# Lecture Notes from Audio\n\n${structuredNotes}`,
     summary,
   }
 }

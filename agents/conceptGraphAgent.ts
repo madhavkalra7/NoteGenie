@@ -1,42 +1,40 @@
 import {
   ConceptGraphInput,
   ConceptGraphOutput,
-  ConceptRelation,
 } from './types'
 
 /**
  * Concept Graph Agent
- * Generates concept relationships for mind map visualization
+ * Generates concept relationships for mind map visualization using OpenAI API
  */
 export async function generateConceptGraph(
   input: ConceptGraphInput
 ): Promise<ConceptGraphOutput> {
-  // TODO: Call AI API to identify semantic relationships between concepts
-  
-  await new Promise(resolve => setTimeout(resolve, 1100))
+  console.log('[ConceptGraphAgent] Generating concept graph...')
 
-  const nodes = input.concepts.map((concept, index) => ({
-    id: concept.id,
-    label: concept.term,
-    level: Math.floor(index / 3), // Distribute into levels
-  }))
+  try {
+    const response = await fetch('/api/concept-graph', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        concepts: input.concepts,
+      }),
+    })
 
-  const edges: ConceptRelation[] = []
-  
-  // Create hierarchical relationships (mock - AI would determine these intelligently)
-  for (let i = 1; i < input.concepts.length; i++) {
-    const parentIndex = Math.floor((i - 1) / 2)
-    if (parentIndex >= 0 && parentIndex < input.concepts.length) {
-      edges.push({
-        from: input.concepts[parentIndex].id,
-        to: input.concepts[i].id,
-        relationship: i % 2 === 0 ? 'relates-to' : 'depends-on',
-      })
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to generate concept graph')
     }
-  }
 
-  return {
-    nodes,
-    edges,
+    const result = await response.json()
+    return {
+      nodes: result.nodes,
+      edges: result.edges,
+    }
+  } catch (error) {
+    console.error('[ConceptGraphAgent] Error:', error)
+    throw error
   }
 }
