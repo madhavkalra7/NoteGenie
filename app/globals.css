@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Patrick+Hand&display=swap');
+
+:root {
+  /* Doodle Theme Colors - High Contrast & Neons */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f0f0f0; /* Light grey for "paper" contrast */
+  --color-text-primary: #000000;
+  --color-text-secondary: #333333;
+  --color-text-muted: #666666;
+
+  /* Highlighter Accents */
+  --color-accent: #000000; /* Main ink color */
+  --color-highlight-yellow: #ffff00;
+  --color-highlight-pink: #ff69b4;
+  --color-highlight-cyan: #00ffff;
+  --color-highlight-green: #adff2f;
+
+  /* Semantic Colors (remapped to highlighters) */
+  --color-success: var(--color-highlight-green);
+  --color-error: var(--color-highlight-pink);
+  --color-warning: var(--color-highlight-yellow);
+  --color-info: var(--color-highlight-cyan);
+
+  /* Doodle Borders */
+  --border-width: 2px;
+  --border-style: solid;
+  --border-color: #000000;
+  --radius-rough: 255px 15px 225px 15px / 15px 225px 15px 255px; /* Hand-drawn circle-ish */
+  --radius-md: 4px; /* Fallback */
+  
+  /* Typography */
+  --font-heading: 'Patrick Hand', cursive;
+  --font-body: 'Architects Daughter', cursive;
+
+  /* Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+  --spacing-2xl: 4rem;
+
+  /* Shadows */
+  --shadow-sketch: 4px 4px 0px 0px #000000;
+  --shadow-hover: 6px 6px 0px 0px #000000;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  background-image: 
+    linear-gradient(#e1e1e1 1px, transparent 1px),
+    linear-gradient(90deg, #e1e1e1 1px, transparent 1px);
+  background-size: 20px 20px; /* Grid paper effect */
+  background-position: center top;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 400; /* Handwritten fonts are usually bold enough */
+  letter-spacing: 1px;
+}
+
+/* Animated Doodle Background Overlay */
+.doodle-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.1;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10 Q 20 20 30 10 T 50 10' stroke='black' fill='none'/%3E%3Ccircle cx='70' cy='70' r='5' stroke='black' fill='none'/%3E%3Cpath d='M80 20 L 90 30 M 90 20 L 80 30' stroke='black'/%3E%3C/svg%3E");
+  animation: floatBackground 60s linear infinite;
+}
+
+@keyframes floatBackground {
+  from { background-position: 0 0; }
+  to { background-position: 100% 100%; }
+}
+
+/* Utility Animations */
+@keyframes jiggle {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(1deg); }
+  50% { transform: rotate(0deg); }
+  75% { transform: rotate(-1deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-jiggle:hover {
+  animation: jiggle 0.3s ease-in-out infinite;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pop-in {
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes genieMagic {
+  0% { transform: scale(1) rotate(0deg); filter: hue-rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-3deg); filter: hue-rotate(90deg); }
+  50% { transform: scale(1) rotate(0deg); filter: hue-rotate(180deg); }
+  75% { transform: scale(1.1) rotate(3deg); filter: hue-rotate(270deg); }
+  100% { transform: scale(1) rotate(0deg); filter: hue-rotate(360deg); }
+}
+
+.animate-genie {
+  animation: genieMagic 3s ease-in-out infinite;
+  background: linear-gradient(45deg, #ff00cc, #3333ff, #00ccff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important; /* Override default color */
+  text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-left: 2px solid black;
+}
+::-webkit-scrollbar-thumb {
+  background: black;
+  border: 2px solid #f1f1f1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
+}
