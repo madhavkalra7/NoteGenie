@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         
         // Dynamic import unpdf
         const { extractText } = await import('unpdf')
-        const result = await extractText(arrayBuffer)
+        const result = await extractText(arrayBuffer) as any
         
         // Handle different result formats
         let extractedText = ''
