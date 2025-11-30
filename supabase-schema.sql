@@ -98,6 +98,24 @@ create index if not exists idx_questions_user_id on public.questions(user_id);
 create index if not exists idx_questions_summary_id on public.questions(summary_id);
 create index if not exists idx_study_tasks_user_id on public.study_tasks(user_id);
 
+-- Generated Books table
+create table if not exists public.generated_books (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  title text not null,
+  category text not null,
+  prompt text not null,
+  chapter_count integer not null default 0,
+  page_count integer not null default 0,
+  pdf_url text,
+  pdf_data bytea,
+  status text check (status in ('generating', 'completed', 'failed')) not null default 'generating',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists idx_generated_books_user_id on public.generated_books(user_id);
+create index if not exists idx_generated_books_created_at on public.generated_books(created_at desc);
+
 -- Row Level Security (RLS)
 alter table public.profiles enable row level security;
 alter table public.summaries enable row level security;
@@ -106,6 +124,7 @@ alter table public.concepts enable row level security;
 alter table public.questions enable row level security;
 alter table public.study_tasks enable row level security;
 alter table public.user_stats enable row level security;
+alter table public.generated_books enable row level security;
 
 -- RLS Policies - Users can only access their own data
 create policy "Users can view own profile" on public.profiles for select using (auth.uid() = id);
@@ -139,6 +158,11 @@ create policy "Users can delete own study_tasks" on public.study_tasks for delet
 create policy "Users can view own stats" on public.user_stats for select using (auth.uid() = user_id);
 create policy "Users can insert own stats" on public.user_stats for insert with check (auth.uid() = user_id);
 create policy "Users can update own stats" on public.user_stats for update using (auth.uid() = user_id);
+
+create policy "Users can view own books" on public.generated_books for select using (auth.uid() = user_id);
+create policy "Users can insert own books" on public.generated_books for insert with check (auth.uid() = user_id);
+create policy "Users can update own books" on public.generated_books for update using (auth.uid() = user_id);
+create policy "Users can delete own books" on public.generated_books for delete using (auth.uid() = user_id);
 
 -- Function to create profile on signup
 create or replace function public.handle_new_user()

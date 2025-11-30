@@ -2,11 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
+import { useUpsideDown } from '@/context/UpsideDownContext'
 import DoodleDropdown from './DoodleDropdown'
 
 export default function Navbar() {
+  const router = useRouter()
   const { state, isHydrated, signOut } = useApp()
+  const { isUpsideDown, isFlipping, toggleUpsideDown } = useUpsideDown()
   const [showLogo, setShowLogo] = useState(false)
 
   useEffect(() => {
@@ -18,8 +22,21 @@ export default function Navbar() {
     window.location.href = '/auth/login'
   }
 
+  const handleUpsideDownClick = () => {
+    if (isFlipping) return
+    toggleUpsideDown()
+    // Navigate to upside down page after flip
+    setTimeout(() => {
+      if (!isUpsideDown) {
+        router.push('/upside-down')
+      } else {
+        router.push('/dashboard')
+      }
+    }, 2600)
+  }
+
   return (
-    <nav className="doodle-navbar">
+    <nav className={`doodle-navbar ${isUpsideDown ? 'navbar-upside-down' : ''}`}>
       {/* Left side - Sign In */}
       <div className="navbar-left">
         {isHydrated && state.user ? (
@@ -38,15 +55,28 @@ export default function Navbar() {
 
       {/* Center - Logo */}
       <div className="navbar-center">
-        <Link href="/">
-          <span className={`brand-logo ${showLogo ? 'magic-write' : ''}`}>
-            🪄 NOTEGENIE ✨
+        <Link href={isUpsideDown ? '/upside-down' : '/'}>
+          <span className={`brand-logo ${showLogo ? 'magic-write' : ''} ${isUpsideDown ? 'brand-upside-down' : ''}`}>
+            {isUpsideDown ? '🌑 NOTEGENIE 🔥' : '🪄 NOTEGENIE ✨'}
           </span>
         </Link>
       </div>
       
-      {/* Right side - Dropdown */}
+      {/* Right side - Upside Down Button + Dropdown */}
       <div className="navbar-right">
+        <button 
+          onClick={handleUpsideDownClick}
+          disabled={isFlipping}
+          className={`upside-down-btn ${isUpsideDown ? 'exit-mode' : 'enter-mode'}`}
+        >
+          {isFlipping ? (
+            <span className="flip-text">⚡ FLIPPING ⚡</span>
+          ) : isUpsideDown ? (
+            <>🌅 EXIT UPSIDE DOWN</>
+          ) : (
+            <>🌌 ENTER UPSIDE DOWN</>
+          )}
+        </button>
         <DoodleDropdown />
       </div>
 
@@ -177,6 +207,126 @@ export default function Navbar() {
           .doodle-navbar .brand-logo {
             font-size: 1.4rem !important;
             padding: 10px 18px;
+          }
+        }
+
+        /* Upside Down Button Styles */
+        .upside-down-btn {
+          position: relative;
+          padding: 12px 20px;
+          margin-right: 16px;
+          font-family: 'Courier New', monospace;
+          font-weight: bold;
+          font-size: 12px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          border-radius: 8px;
+          cursor: pointer;
+          overflow: hidden;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+        }
+
+        .upside-down-btn.enter-mode {
+          background: linear-gradient(135deg, #1a0a0a 0%, #2d0000 50%, #1a0a0a 100%);
+          color: #ff4444;
+          border: 3px solid #8b0000;
+          text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+          box-shadow: 0 0 15px rgba(139, 0, 0, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.5);
+          animation: buttonPulse 2s infinite;
+        }
+
+        .upside-down-btn.exit-mode {
+          background: linear-gradient(135deg, #0a1a1a 0%, #002d2d 50%, #0a1a1a 100%);
+          color: #44ffff;
+          border: 3px solid #008b8b;
+          text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+          box-shadow: 0 0 15px rgba(0, 139, 139, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes buttonPulse {
+          0%, 100% { box-shadow: 0 0 15px rgba(139, 0, 0, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.5); }
+          50% { box-shadow: 0 0 25px rgba(255, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5); }
+        }
+
+        .upside-down-btn::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: linear-gradient(45deg, transparent 30%, rgba(255, 0, 0, 0.1) 50%, transparent 70%);
+          animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+          0% { transform: translateX(-100%) rotate(45deg); }
+          100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .upside-down-btn:hover:not(:disabled) {
+          transform: scale(1.05);
+        }
+
+        .upside-down-btn.enter-mode:hover:not(:disabled) {
+          border-color: #ff0000;
+          box-shadow: 0 0 30px rgba(255, 0, 0, 0.7), inset 0 0 20px rgba(139, 0, 0, 0.5);
+        }
+
+        .upside-down-btn.exit-mode:hover:not(:disabled) {
+          border-color: #00ffff;
+          box-shadow: 0 0 30px rgba(0, 255, 255, 0.7), inset 0 0 20px rgba(0, 139, 139, 0.5);
+        }
+
+        .upside-down-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.8;
+        }
+
+        .flip-text {
+          animation: flipTextGlow 0.5s infinite alternate;
+        }
+
+        @keyframes flipTextGlow {
+          0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff; }
+          100% { text-shadow: 0 0 15px #ff0, 0 0 30px #ff0; }
+        }
+
+        /* Upside Down mode navbar styles */
+        .navbar-upside-down {
+          background: linear-gradient(to bottom, rgba(10, 10, 15, 0.95), transparent) !important;
+        }
+
+        .navbar-upside-down .user-email {
+          color: #888 !important;
+        }
+
+        .navbar-upside-down .logout-btn {
+          background: #2d0000 !important;
+          color: #ff4444 !important;
+          border-color: #8b0000 !important;
+          box-shadow: 4px 4px 0px 0px #8b0000 !important;
+        }
+
+        .brand-upside-down {
+          background: linear-gradient(135deg, #1a0a0a 0%, #2d0000 100%) !important;
+          color: #ff4444 !important;
+          border-color: #8b0000 !important;
+          box-shadow: 5px 5px 0px 0px #8b0000 !important;
+          text-shadow: 0 0 10px #ff0000;
+        }
+
+        .brand-upside-down:hover {
+          background: linear-gradient(135deg, #2d0000 0%, #4a0000 100%) !important;
+          box-shadow: 8px 8px 0px 0px #ff0000 !important;
+        }
+
+        @media (max-width: 768px) {
+          .upside-down-btn {
+            padding: 8px 12px;
+            font-size: 10px;
+            margin-right: 8px;
           }
         }
       `}</style>
