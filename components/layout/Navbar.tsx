@@ -18,8 +18,13 @@ export default function Navbar() {
   }, [])
 
   const handleSignOut = async () => {
-    await signOut()
-    window.location.href = '/auth/login'
+    try {
+      await signOut()
+    } catch (e) {
+      console.error('Logout error:', e)
+    }
+    // Force full page reload to clear all state
+    window.location.replace('/auth/login')
   }
 
   const handleUpsideDownClick = () => {
