@@ -39,18 +39,18 @@ export default function Navbar() {
     <nav className={`doodle-navbar ${isUpsideDown ? 'navbar-upside-down' : ''}`}>
       {/* Left side - Sign In */}
       <div className="navbar-left">
-        {isHydrated && state.user ? (
+        {state.user ? (
           <div className="user-menu">
             <span className="user-email">{state.user.email}</span>
             <button onClick={handleSignOut} className="logout-btn">
               ✌️ LOGOUT ✌️
             </button>
           </div>
-        ) : isHydrated ? (
+        ) : (
           <Link href="/auth/login">
             <span className="login-btn">✨ SIGN IN ✨</span>
           </Link>
-        ) : null}
+        )}
       </div>
 
       {/* Center - Logo */}
