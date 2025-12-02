@@ -15,6 +15,7 @@ export default function Sidebar() {
     { href: '/flashcards', icon: '⚡', label: 'Flashcards & Quiz', color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)' },
     { href: '/study-plan', icon: '🎯', label: 'Study Plan', color: '#10b981', gradient: 'linear-gradient(135deg, #10b981, #14b8a6)' },
     { href: '/concept-graph', icon: '🔮', label: 'Concept Graph', color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)' },
+    { href: '/doubt-solver', icon: '🤖', label: 'Doubt Solver', color: '#06b6d4', gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)' },
     { href: '/settings', icon: '⚙️', label: 'Settings', color: '#6b7280', gradient: 'linear-gradient(135deg, #6b7280, #374151)' },
   ]
 

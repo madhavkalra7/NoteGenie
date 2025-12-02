@@ -1,25 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callOpenAI, parseJSONResponse } from '@/lib/openai'
 
-const SYSTEM_PROMPT = `You are a friendly, expert tutor named DoodleBot.
-Your job is to explain concepts in multiple ways to help students understand.
+// Smart prompt that handles both casual chat and study doubts
+const SYSTEM_PROMPT = `You are DoodleBot 🤖, a friendly AI assistant.
 
-Provide explanations that are:
-1. Simple and easy to understand
-2. Detailed with examples
-3. Use creative analogies
-4. Step-by-step when applicable
+IMPORTANT: First determine if the user is asking a STUDY/ACADEMIC doubt or just having CASUAL CHAT.
 
-YOU MUST respond with ONLY a valid JSON object in this exact format:
+FOR CASUAL CHAT (greetings, general questions, chitchat):
+Respond with this JSON:
 {
-  "simpleExplanation": "A simple 2-3 sentence explanation for beginners",
-  "detailedExplanation": "A comprehensive explanation with examples",
-  "analogy": "A creative real-world analogy to help understand",
-  "oneLiner": "One catchy sentence that captures the essence",
-  "stepByStep": ["Step 1: ...", "Step 2: ...", "Step 3: ..."]
+  "type": "chat",
+  "reply": "Your friendly short response here"
 }
 
-Be encouraging and make learning fun! Do not include any text outside the JSON object.`
+FOR STUDY/ACADEMIC DOUBTS (when they ask to explain concepts, solve problems, understand topics):
+Respond with this JSON:
+{
+  "type": "doubt",
+  "simpleExplanation": "2-3 sentence explanation",
+  "detailedExplanation": "Comprehensive explanation with examples",
+  "analogy": "Creative real-world analogy",
+  "oneLiner": "One catchy sentence",
+  "stepByStep": ["Step 1", "Step 2", "Step 3"]
+}
+
+Examples of CASUAL: "hi", "hello", "how are you", "what can you do", "thanks", "bye"
+Examples of STUDY DOUBTS: "explain photosynthesis", "what is gravity", "how does recursion work"
+
+YOU MUST respond with ONLY valid JSON. Be friendly and encouraging!`
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,29 +40,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userPrompt = `Help me understand this:
-
-Doubt/Question: ${doubt}
-
-${context ? `Context: ${context}` : ''}
-
-Please explain this in multiple ways to help me truly understand.
-Remember to respond with ONLY a valid JSON object.`
+    const userPrompt = context 
+      ? `User message: ${doubt}\n\nContext from their notes:\n${context}\n\nRespond appropriately based on whether this is casual chat or a study doubt.`
+      : `User message: ${doubt}\n\nRespond appropriately - if it's casual chat, keep it short and friendly. If it's a study question, provide detailed explanation.`
 
     const response = await callOpenAI([
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt }
-    ])
+    ], { max_completion_tokens: 2000 })
 
-    const result = parseJSONResponse<{
-      simpleExplanation: string
-      detailedExplanation: string
-      analogy: string
-      oneLiner: string
-      stepByStep: string[]
-    }>(response)
+    const result = parseJSONResponse<any>(response)
 
-    return NextResponse.json(result)
+    // If it's casual chat, return simple format
+    if (result.type === 'chat') {
+      return NextResponse.json({
+        type: 'chat',
+        reply: result.reply
+      })
+    }
+
+    // Otherwise return full doubt explanation
+    return NextResponse.json({
+      type: 'doubt',
+      simpleExplanation: result.simpleExplanation,
+      detailedExplanation: result.detailedExplanation,
+      analogy: result.analogy,
+      oneLiner: result.oneLiner,
+      stepByStep: result.stepByStep
+    })
   } catch (error) {
     console.error('Resolve Doubt API Error:', error)
     return NextResponse.json(

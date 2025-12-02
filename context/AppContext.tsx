@@ -35,6 +35,7 @@ interface AppContextType {
   addConcepts: (concepts: Omit<DbConcept, 'id' | 'created_at' | 'user_id'>[], summaryId?: string) => Promise<void>
   addQuestions: (questions: Omit<DbQuestion, 'id' | 'created_at' | 'user_id'>[], summaryId?: string) => Promise<void>
   setStudyPlan: (plan: Omit<DbStudyTask, 'id' | 'created_at' | 'user_id'>[]) => Promise<void>
+  updateStudyTask: (id: string, updates: Partial<DbStudyTask>) => Promise<void>
   updateFlashcard: (id: string, updates: Partial<DbFlashcard>) => Promise<void>
   updateStats: (updates: Partial<AppState['stats']>) => Promise<void>
   getSummaryWithData: (summaryId: string) => Promise<any>
@@ -324,6 +325,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const updateStudyTask = async (id: string, updates: Partial<DbStudyTask>) => {
+    const { data, error } = await db.updateStudyTask(id, updates)
+
+    if (error) {
+      console.error('Error updating study task:', error)
+      return
+    }
+
+    if (data) {
+      setState(prev => ({
+        ...prev,
+        studyPlan: prev.studyPlan.map(t => t.id === id ? data : t),
+      }))
+    }
+  }
+
   const updateFlashcard = async (id: string, updates: Partial<DbFlashcard>) => {
     const { data, error } = await db.updateFlashcard(id, updates)
 
@@ -385,6 +402,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addConcepts,
         addQuestions,
         setStudyPlan,
+        updateStudyTask,
         updateFlashcard,
         updateStats,
         getSummaryWithData,

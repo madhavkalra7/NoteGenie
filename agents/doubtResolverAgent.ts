@@ -30,7 +30,17 @@ export async function resolveDoubt(
     }
 
     const result = await response.json()
+    
+    // Return based on response type (chat or doubt)
+    if (result.type === 'chat') {
+      return {
+        type: 'chat',
+        reply: result.reply,
+      }
+    }
+    
     return {
+      type: 'doubt',
       simpleExplanation: result.simpleExplanation,
       detailedExplanation: result.detailedExplanation,
       analogy: result.analogy,

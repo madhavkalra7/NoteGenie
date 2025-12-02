@@ -150,10 +150,14 @@ export interface DoubtResolverInput {
 }
 
 export interface DoubtResolverOutput {
-  simpleExplanation: string;
-  detailedExplanation: string;
-  analogy: string;
-  oneLiner: string;
+  type: 'chat' | 'doubt';
+  // For casual chat
+  reply?: string;
+  // For study doubts
+  simpleExplanation?: string;
+  detailedExplanation?: string;
+  analogy?: string;
+  oneLiner?: string;
   stepByStep?: string[];
 }
 

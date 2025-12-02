@@ -6,7 +6,7 @@ import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import Flashcard from '@/components/Flashcard'
+import AnimatedFlashcard from '@/components/AnimatedFlashcard'
 import { useApp } from '@/context/AppContext'
 import { validateAnswer } from '@/agents/answerValidatorAgent'
 import { generateFlashcards } from '@/agents/flashcardAgent'
@@ -15,7 +15,7 @@ import { generateQuestions } from '@/agents/questionMakerAgent'
 export default function FlashcardsPage() {
   const router = useRouter()
   const { state, isReady, updateFlashcard, updateStats, addFlashcards, addQuestions, getSummaryWithData, refreshData } = useApp()
-  const [view, setView] = useState<'select' | 'flashcards' | 'quiz'>('select')
+  const [view, setView] = useState<'select' | 'flashcards' | 'quiz' | 'score' | 'all'>('select')
   const [selectedSummaryId, setSelectedSummaryId] = useState<string | null>(null)
   const [currentFlashcards, setCurrentFlashcards] = useState<any[]>([])
   const [currentQuestions, setCurrentQuestions] = useState<any[]>([])
@@ -24,11 +24,13 @@ export default function FlashcardsPage() {
   const [quizResult, setQuizResult] = useState<any>(null)
   const [generating, setGenerating] = useState(false)
   const [mode, setMode] = useState<'flashcards' | 'quiz'>('flashcards')
+  const [quizAnswers, setQuizAnswers] = useState<{questionId: string, answer: string, isCorrect: boolean, score: number}[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
   // Debug log
   useEffect(() => {
-    console.log('Flashcards Page - isReady:', isReady, 'User:', state.user?.email, 'Summaries:', state.summaries.length)
-  }, [isReady, state.user, state.summaries])
+    console.log('Flashcards Page - isReady:', isReady, 'User:', state.user?.email, 'Summaries:', state.summaries.length, 'Flashcards:', state.flashcards.length)
+  }, [isReady, state.user, state.summaries, state.flashcards])
 
   // Redirect to login if not authenticated (only after ready)
   useEffect(() => {
@@ -36,6 +38,34 @@ export default function FlashcardsPage() {
       router.push('/auth/login')
     }
   }, [isReady, state.user, router])
+
+  // View all flashcards function
+  const handleViewAllFlashcards = () => {
+    if (state.flashcards.length === 0) return
+    
+    const allFlashcards = state.flashcards.map(f => ({
+      id: f.id,
+      question: f.question,
+      answer: f.answer,
+      times_reviewed: f.times_reviewed,
+      was_correct: f.was_correct,
+      summary_id: f.summary_id,
+    }))
+    const allQuestions = state.questions.map(q => ({
+      id: q.id,
+      question: q.question,
+      type: q.type,
+      options: q.options,
+      correctAnswer: q.correct_answer,
+      correct_answer: q.correct_answer,
+      difficulty: q.difficulty,
+    }))
+    
+    setCurrentFlashcards(allFlashcards)
+    setCurrentQuestions(allQuestions)
+    setCurrentIndex(0)
+    setView('all')
+  }
 
   // Show loading until ready (hydrated + data loaded)
   if (!isReady) {
@@ -76,24 +106,47 @@ export default function FlashcardsPage() {
     setSelectedSummaryId(summaryId)
     setGenerating(true)
     setCurrentIndex(0)
+    setQuizResult(null)
+    setQuizAnswer('')
+    setQuizAnswers([])
 
     try {
       // Get the summary with its concepts
       const data = await getSummaryWithData(summaryId)
       console.log('📚 Summary data:', data)
       
-      // Check if flashcards already exist for this summary
-      const existingFlashcards = state.flashcards.filter(f => f.summary_id === summaryId)
-      const existingQuestions = state.questions.filter(q => q.summary_id === summaryId)
+      // Check if flashcards already exist for this summary from the fetched data
+      const existingFlashcards = data.flashcards || []
+      const existingQuestions = data.questions || []
 
       console.log('🔖 Existing flashcards:', existingFlashcards.length, 'questions:', existingQuestions.length)
 
-      if (existingFlashcards.length > 0 || existingQuestions.length > 0) {
-        // Use existing
-        setCurrentFlashcards(existingFlashcards)
-        setCurrentQuestions(existingQuestions)
+      if (existingFlashcards.length > 0) {
+        // Use existing - map to correct format
+        const mappedFlashcards = existingFlashcards.map((f: any) => ({
+          id: f.id,
+          question: f.question,
+          answer: f.answer,
+          times_reviewed: f.times_reviewed,
+          was_correct: f.was_correct,
+        }))
+        const mappedQuestions = existingQuestions.map((q: any) => ({
+          id: q.id,
+          question: q.question,
+          type: q.type,
+          options: q.options,
+          correctAnswer: q.correct_answer,
+          correct_answer: q.correct_answer,
+          difficulty: q.difficulty,
+        }))
+        setCurrentFlashcards(mappedFlashcards)
+        setCurrentQuestions(mappedQuestions.length > 0 ? mappedQuestions : [])
         setGenerating(false)
         setView('flashcards')
+        console.log('✅ Using existing flashcards and questions from database')
+        
+        // Refresh data in background
+        refreshData()
         return
       }
 
@@ -214,18 +267,64 @@ export default function FlashcardsPage() {
 
   const handleSubmitAnswer = async () => {
     const currentQuestion = currentQuestions[currentIndex]
-    if (!currentQuestion) return
+    if (!currentQuestion || submitting) return
 
-    const result = await validateAnswer({
-      question: currentQuestion.question,
-      userAnswer: quizAnswer,
-      correctAnswer: currentQuestion.correct_answer || currentQuestion.correctAnswer,
-    })
+    setSubmitting(true)
+    
+    try {
+      const result = await validateAnswer({
+        question: currentQuestion.question,
+        userAnswer: quizAnswer,
+        correctAnswer: currentQuestion.correct_answer || currentQuestion.correctAnswer,
+      })
 
-    setQuizResult(result)
-    if (result.wasCorrect) {
+      setQuizResult(result)
+      
+      // Save this answer
+      setQuizAnswers(prev => [...prev, {
+        questionId: currentQuestion.id || `q-${currentIndex}`,
+        answer: quizAnswer,
+        isCorrect: result.wasCorrect,
+        score: result.score || 0,
+      }])
+    } catch (error) {
+      console.error('Error validating answer:', error)
+      alert('Error checking answer. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Move to next question after viewing result
+  const handleNextQuestion = () => {
+    if (currentIndex < currentQuestions.length - 1) {
+      setCurrentIndex(prev => prev + 1)
+      setQuizResult(null)
+      setQuizAnswer('')
+    } else {
+      // Quiz complete - show score
+      setView('score')
       updateStats({ quizzesTaken: state.stats.quizzesTaken + 1 })
     }
+  }
+
+  // Calculate final score
+  const calculateFinalScore = () => {
+    if (quizAnswers.length === 0) return { correct: 0, total: 0, percentage: 0 }
+    const correct = quizAnswers.filter(a => a.isCorrect).length
+    const total = quizAnswers.length
+    const percentage = Math.round((correct / total) * 100)
+    return { correct, total, percentage }
+  }
+
+  // Restart quiz
+  const handleRestartQuiz = () => {
+    setQuizAnswers([])
+    setCurrentIndex(0)
+    setQuizResult(null)
+    setQuizAnswer('')
+    setView('flashcards')
+    setMode('quiz')
   }
 
   return (
@@ -233,10 +332,60 @@ export default function FlashcardsPage() {
       <div className="flashcards-page">
         <h1 className="page-title">Flashcards & Quiz</h1>
         
+        {/* Score View */}
+        {view === 'score' && (
+          <div className="score-section">
+            <div className="score-card">
+              <h2>🎉 Quiz Complete!</h2>
+              <div className="final-score">
+                <div className="score-circle" style={{
+                  background: `conic-gradient(${calculateFinalScore().percentage >= 70 ? '#22c55e' : calculateFinalScore().percentage >= 40 ? '#eab308' : '#ef4444'} ${calculateFinalScore().percentage}%, #e5e7eb ${calculateFinalScore().percentage}%)`
+                }}>
+                  <span className="score-number">{calculateFinalScore().percentage}%</span>
+                </div>
+                <p className="score-text">
+                  You got <strong>{calculateFinalScore().correct}</strong> out of <strong>{calculateFinalScore().total}</strong> questions correct!
+                </p>
+              </div>
+              <div className="score-breakdown">
+                <h3>Question Breakdown:</h3>
+                {quizAnswers.map((ans, idx) => (
+                  <div key={idx} className={`breakdown-item ${ans.isCorrect ? 'correct' : 'incorrect'}`}>
+                    <span className="breakdown-icon">{ans.isCorrect ? '✅' : '❌'}</span>
+                    <span>Question {idx + 1}</span>
+                    <span className="breakdown-score">Score: {ans.score}/10</span>
+                  </div>
+                ))}
+              </div>
+              <div className="score-actions">
+                <Button onClick={handleRestartQuiz}>Try Again</Button>
+                <Button variant="outline" onClick={handleBackToSelect}>Back to Notes</Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Note Selection View */}
         {view === 'select' && (
           <div className="select-section">
-            <p className="section-subtitle">Select notes to generate flashcards and quiz questions</p>
+            <p className="section-subtitle">Select notes to practice flashcards and quiz</p>
+            
+            {/* Quick Stats */}
+            {state.flashcards.length > 0 && (
+              <div className="quick-stats">
+                <div className="stat-box">
+                  <span className="stat-num">{state.flashcards.length}</span>
+                  <span className="stat-label">Total Flashcards</span>
+                </div>
+                <div className="stat-box">
+                  <span className="stat-num">{state.questions.length}</span>
+                  <span className="stat-label">Quiz Questions</span>
+                </div>
+                <button className="view-all-btn" onClick={handleViewAllFlashcards}>
+                  🎴 View All Flashcards
+                </button>
+              </div>
+            )}
             
             {generating && (
               <div className="generating-state">
@@ -247,24 +396,39 @@ export default function FlashcardsPage() {
 
             {!generating && state.summaries.length > 0 ? (
               <div className="notes-grid">
-                {state.summaries.map((summary) => (
-                  <div 
-                    key={summary.id} 
-                    className="note-card"
-                    onClick={() => handleSelectNote(summary.id)}
-                  >
-                    <h3 className="note-title">{summary.title}</h3>
-                    <p className="note-preview">{summary.one_liner}</p>
-                    <div className="note-meta">
-                      <span className="note-date">
-                        {new Date(summary.created_at).toLocaleDateString()}
-                      </span>
-                      {state.flashcards.filter(f => f.summary_id === summary.id).length > 0 && (
-                        <span className="has-flashcards">🔖 Has flashcards</span>
-                      )}
+                {state.summaries.map((summary) => {
+                  const noteFlashcards = state.flashcards.filter(f => f.summary_id === summary.id)
+                  const noteQuestions = state.questions.filter(q => q.summary_id === summary.id)
+                  const hasContent = noteFlashcards.length > 0 || noteQuestions.length > 0
+                  
+                  return (
+                    <div 
+                      key={summary.id} 
+                      className={`note-card ${hasContent ? 'has-content' : ''}`}
+                      onClick={() => handleSelectNote(summary.id)}
+                    >
+                      <h3 className="note-title">{summary.title}</h3>
+                      <p className="note-preview">{summary.one_liner}</p>
+                      <div className="note-meta">
+                        <span className="note-date">
+                          {new Date(summary.created_at).toLocaleDateString()}
+                        </span>
+                        {hasContent ? (
+                          <div className="content-badges">
+                            {noteFlashcards.length > 0 && (
+                              <span className="badge flashcard-badge">🔖 {noteFlashcards.length} cards</span>
+                            )}
+                            {noteQuestions.length > 0 && (
+                              <span className="badge question-badge">❓ {noteQuestions.length} questions</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="generate-hint">Click to generate</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : !generating && (
               <Card>
@@ -279,7 +443,7 @@ export default function FlashcardsPage() {
         )}
 
         {/* Flashcards/Quiz View */}
-        {view !== 'select' && (
+        {(view === 'flashcards' || view === 'all') && (
           <>
             <Button variant="outline" onClick={handleBackToSelect} className="back-btn">
               ← Back to Notes
@@ -306,28 +470,14 @@ export default function FlashcardsPage() {
               <div className="flashcards-section">
                 {currentFlashcards.length > 0 ? (
                   <>
-                    <div className="progress-bar">
-                      <div className="progress-text">
-                        {currentIndex + 1} / {currentFlashcards.length}
-                      </div>
-                      <div className="progress-fill" style={{ width: `${((currentIndex + 1) / currentFlashcards.length) * 100}%` }} />
-                    </div>
-
-                    <Flashcard
+                    <AnimatedFlashcard
                       question={currentFlashcards[currentIndex].question}
                       answer={currentFlashcards[currentIndex].answer}
+                      index={currentIndex}
+                      total={currentFlashcards.length}
                       onKnew={handleKnew}
                       onDidntKnow={handleDidntKnow}
                     />
-
-                    <div className="navigation-buttons">
-                      <Button variant="outline" onClick={handlePrevious}>
-                        ← Previous
-                      </Button>
-                      <Button variant="outline" onClick={handleNext}>
-                        Next →
-                      </Button>
-                    </div>
                   </>
                 ) : (
                   <Card>
@@ -367,8 +517,9 @@ export default function FlashcardsPage() {
                             {currentQuestions[currentIndex].options!.map((option: string, idx: number) => (
                               <button
                                 key={idx}
-                                className={`option-btn ${quizAnswer === option ? 'selected' : ''}`}
-                                onClick={() => setQuizAnswer(option)}
+                                className={`option-btn ${quizAnswer === option ? 'selected' : ''} ${quizResult ? 'disabled' : ''}`}
+                                onClick={() => !quizResult && setQuizAnswer(option)}
+                                disabled={quizResult !== null}
                               >
                                 {String.fromCharCode(65 + idx)}. {option}
                               </button>
@@ -383,15 +534,20 @@ export default function FlashcardsPage() {
                             value={quizAnswer}
                             onChange={(e) => setQuizAnswer(e.target.value)}
                             rows={4}
+                            disabled={quizResult !== null}
                           />
                         )}
 
-                        <div className="quiz-actions">
-                          <Button onClick={handleSubmitAnswer} disabled={!quizAnswer}>
-                            Submit Answer
-                          </Button>
-                        </div>
+                        {/* Show submit button only when no result yet */}
+                        {!quizResult && (
+                          <div className="quiz-actions">
+                            <Button onClick={handleSubmitAnswer} disabled={!quizAnswer || submitting} loading={submitting}>
+                              {submitting ? 'Checking...' : 'Submit Answer'}
+                            </Button>
+                          </div>
+                        )}
 
+                        {/* Show result and next button after submission */}
                         {quizResult && (
                           <div className={`answer-result ${quizResult.wasCorrect ? 'correct' : 'incorrect'}`}>
                             <div className="result-header">
@@ -405,19 +561,13 @@ export default function FlashcardsPage() {
                               <strong>Model Answer:</strong>
                               <p>{quizResult.modelAnswer}</p>
                             </div>
+                            <Button onClick={handleNextQuestion} className="next-question-btn">
+                              {currentIndex < currentQuestions.length - 1 ? 'Next Question →' : 'See Results 🎯'}
+                            </Button>
                           </div>
                         )}
                       </div>
                     </Card>
-
-                    <div className="navigation-buttons">
-                      <Button variant="outline" onClick={handlePrevious}>
-                        ← Previous
-                      </Button>
-                      <Button variant="outline" onClick={handleNext}>
-                        Next →
-                      </Button>
-                    </div>
                   </>
                 ) : (
                   <Card>
@@ -513,6 +663,84 @@ export default function FlashcardsPage() {
         .has-flashcards {
           color: var(--color-accent);
           font-weight: var(--font-weight-medium);
+        }
+
+        .quick-stats {
+          display: flex;
+          gap: var(--spacing-md);
+          margin-bottom: var(--spacing-xl);
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .stat-box {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: var(--spacing-md) var(--spacing-lg);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border-radius: var(--radius-md);
+          min-width: 100px;
+        }
+
+        .stat-num {
+          font-size: 24px;
+          font-weight: bold;
+        }
+
+        .stat-label {
+          font-size: 12px;
+          opacity: 0.9;
+        }
+
+        .view-all-btn {
+          padding: var(--spacing-md) var(--spacing-xl);
+          background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+          color: white;
+          border: none;
+          border-radius: var(--radius-md);
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-size: 14px;
+        }
+
+        .view-all-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .note-card.has-content {
+          border-color: #667eea;
+          background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+        }
+
+        .content-badges {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .badge {
+          font-size: 11px;
+          padding: 2px 8px;
+          border-radius: 10px;
+        }
+
+        .flashcard-badge {
+          background: #667eea22;
+          color: #667eea;
+        }
+
+        .question-badge {
+          background: #f59e0b22;
+          color: #d97706;
+        }
+
+        .generate-hint {
+          color: var(--color-text-muted);
+          font-style: italic;
         }
 
         .mode-toggle {
@@ -658,7 +886,7 @@ export default function FlashcardsPage() {
           font-size: var(--font-size-base);
         }
 
-        .option-btn:hover {
+        .option-btn:hover:not(.disabled) {
           border-color: var(--color-accent);
           background: var(--color-accent-light);
         }
@@ -666,6 +894,11 @@ export default function FlashcardsPage() {
         .option-btn.selected {
           border-color: var(--color-accent);
           background: var(--color-accent-light);
+        }
+
+        .option-btn.disabled {
+          cursor: not-allowed;
+          opacity: 0.7;
         }
 
         .quiz-actions {
@@ -715,6 +948,114 @@ export default function FlashcardsPage() {
           display: block;
           color: var(--color-accent);
           margin-bottom: var(--spacing-xs);
+        }
+
+        .next-question-btn {
+          margin-top: var(--spacing-lg);
+          width: 100%;
+        }
+
+        /* Score Section */
+        .score-section {
+          display: flex;
+          justify-content: center;
+          padding: var(--spacing-2xl) 0;
+        }
+
+        .score-card {
+          background: var(--color-card);
+          border: 3px solid #000;
+          border-radius: var(--radius-lg);
+          padding: var(--spacing-2xl);
+          max-width: 500px;
+          width: 100%;
+          text-align: center;
+          box-shadow: 5px 5px 0px 0px black;
+        }
+
+        .score-card h2 {
+          font-size: var(--font-size-2xl);
+          margin-bottom: var(--spacing-xl);
+        }
+
+        .final-score {
+          margin-bottom: var(--spacing-xl);
+        }
+
+        .score-circle {
+          width: 150px;
+          height: 150px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto var(--spacing-lg);
+          position: relative;
+        }
+
+        .score-circle::before {
+          content: '';
+          position: absolute;
+          width: 120px;
+          height: 120px;
+          background: white;
+          border-radius: 50%;
+        }
+
+        .score-number {
+          position: relative;
+          z-index: 1;
+          font-size: var(--font-size-3xl);
+          font-weight: var(--font-weight-bold);
+        }
+
+        .score-text {
+          font-size: var(--font-size-lg);
+          color: var(--color-text-secondary);
+        }
+
+        .score-breakdown {
+          text-align: left;
+          margin-bottom: var(--spacing-xl);
+          background: var(--color-background);
+          padding: var(--spacing-lg);
+          border-radius: var(--radius-md);
+        }
+
+        .score-breakdown h3 {
+          margin-bottom: var(--spacing-md);
+          font-size: var(--font-size-base);
+        }
+
+        .breakdown-item {
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-md);
+          padding: var(--spacing-sm) 0;
+          border-bottom: 1px solid var(--color-border);
+        }
+
+        .breakdown-item:last-child {
+          border-bottom: none;
+        }
+
+        .breakdown-item.correct {
+          color: var(--color-success);
+        }
+
+        .breakdown-item.incorrect {
+          color: var(--color-error);
+        }
+
+        .breakdown-score {
+          margin-left: auto;
+          font-weight: var(--font-weight-medium);
+        }
+
+        .score-actions {
+          display: flex;
+          gap: var(--spacing-md);
+          justify-content: center;
         }
 
         @keyframes slideUp {

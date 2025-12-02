@@ -1,16 +1,37 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import { useApp } from '@/context/AppContext'
 import Link from 'next/link'
 import ConceptTag from '@/components/ConceptTag'
 
+// Local storage key for study plan (same as in study-plan page)
+const STUDY_PLAN_CACHE_KEY = 'notegenie_study_plan'
+
 export default function DashboardPage() {
   const router = useRouter()
   const { state, isReady, getSummaryWithData } = useApp()
+  const [localStudyPlan, setLocalStudyPlan] = useState<any[]>([])
+
+  // Load study plan from localStorage
+  useEffect(() => {
+    if (isReady && state.user) {
+      try {
+        const saved = localStorage.getItem(`${STUDY_PLAN_CACHE_KEY}_${state.user.id}`)
+        if (saved) {
+          setLocalStudyPlan(JSON.parse(saved))
+        }
+      } catch (e) {
+        console.error('Error loading study plan from localStorage:', e)
+      }
+    }
+  }, [isReady, state.user])
+
+  // Use local plan if available, otherwise use state plan
+  const displayStudyPlan = localStudyPlan.length > 0 ? localStudyPlan : state.studyPlan
 
   // Redirect to login if not authenticated (only after ready)
   useEffect(() => {
@@ -93,7 +114,7 @@ export default function DashboardPage() {
           <StatCard
             icon="🎯"
             label="Study Tasks"
-            value={state.studyPlan.filter(t => !t.completed).length}
+            value={displayStudyPlan.filter(t => !t.completed).length}
             color="#f59e0b"
           />
         </div>
@@ -112,6 +133,10 @@ export default function DashboardPage() {
             <span className="action-icon">📅</span>
             <span className="action-text">Study Plan</span>
           </Link>
+          <Link href="/doubt-solver" className="action-card">
+            <span className="action-icon">🤖</span>
+            <span className="action-text">Ask Doubt</span>
+          </Link>
         </div>
 
         {/* Main Dashboard Content */}
@@ -119,9 +144,9 @@ export default function DashboardPage() {
           {/* Today's Focus */}
           <Card className="focus-card">
             <h2 className="card-title">🎯 Today's Focus</h2>
-            {state.studyPlan.length > 0 ? (
+            {displayStudyPlan.length > 0 ? (
               <div className="focus-content">
-                {state.studyPlan.slice(0, 3).map(task => (
+                {displayStudyPlan.filter(t => !t.completed).slice(0, 3).map(task => (
                   <div key={task.id} className="focus-item">
                     <span className={`priority-badge priority-${task.priority}`}>
                       {task.priority}
@@ -132,6 +157,12 @@ export default function DashboardPage() {
                     <div className="focus-duration">{task.duration} min</div>
                   </div>
                 ))}
+                {displayStudyPlan.filter(t => !t.completed).length === 0 && (
+                  <div className="all-done">
+                    <span>🎉</span>
+                    <p>All tasks completed!</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="empty-state">
@@ -342,6 +373,22 @@ export default function DashboardPage() {
 
         .empty-state a {
           color: #667eea;
+          font-weight: 600;
+        }
+
+        .all-done {
+          text-align: center;
+          padding: var(--spacing-lg);
+        }
+
+        .all-done span {
+          font-size: 48px;
+          display: block;
+          margin-bottom: var(--spacing-sm);
+        }
+
+        .all-done p {
+          color: #22c55e;
           font-weight: 600;
         }
 
