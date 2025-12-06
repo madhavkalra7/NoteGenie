@@ -163,7 +163,7 @@ export interface DoubtResolverOutput {
 
 // Audio to Notes Agent
 export interface AudioToNotesInput {
-  audioFile: File | string;
+  audioFile: File;
 }
 
 export interface AudioToNotesOutput {

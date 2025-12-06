@@ -173,8 +173,15 @@ export default function FlashcardsPage() {
       })
       console.log('✅ Questions generated:', newQuestions?.length)
 
-      // Save to database
-      console.log('💾 Saving flashcards to database...')
+      // Set state and switch view FIRST to show results immediately
+      setCurrentFlashcards(newFlashcards)
+      setCurrentQuestions(newQuestions)
+      setGenerating(false)
+      setView('flashcards')
+      
+      console.log('🎉 Showing flashcards! Saving to database in background...')
+
+      // Save to database in background (don't wait)
       const dbFlashcards = newFlashcards.map((f: any) => ({
         summary_id: summaryId,
         concept_id: null,
@@ -184,10 +191,7 @@ export default function FlashcardsPage() {
         was_correct: null,
         last_reviewed: null,
       }))
-      await addFlashcards(dbFlashcards, summaryId)
-      console.log('✅ Flashcards saved')
-
-      console.log('💾 Saving questions to database...')
+      
       const dbQuestions = newQuestions.map((q: any) => ({
         summary_id: summaryId,
         question: q.question,
@@ -196,16 +200,17 @@ export default function FlashcardsPage() {
         correct_answer: q.correctAnswer || q.answer || '',
         difficulty: q.difficulty || 'medium',
       }))
-      await addQuestions(dbQuestions, summaryId)
-      console.log('✅ Questions saved')
-
-      // Set state and switch view
-      setCurrentFlashcards(newFlashcards)
-      setCurrentQuestions(newQuestions)
-      setGenerating(false)
-      setView('flashcards')
       
-      console.log('🎉 Done! Switching to flashcards view')
+      // Save in background without blocking
+      Promise.all([
+        addFlashcards(dbFlashcards, summaryId),
+        addQuestions(dbQuestions, summaryId)
+      ]).then(() => {
+        console.log('✅ Flashcards and questions saved to database')
+      }).catch(err => {
+        console.error('❌ Background save failed:', err)
+      })
+
     } catch (error) {
       console.error('Error generating flashcards:', error)
       alert('Error generating flashcards. Please try again.')

@@ -2,6 +2,16 @@ import {
   SummarizerInput,
   SummarizerOutput,
 } from './types'
+import { callOpenAI, parseJSONResponse } from '@/lib/openai'
+
+const SYSTEM_PROMPT = `You are DoodleBot, a fun AI study companion. Summarize notes in JSON format.
+
+IMPORTANT: Respond with ONLY valid JSON, no other text.
+
+Required format:
+{"oneLiner":"Catchy summary with emoji 🎯","shortSummary":"2-3 sentence overview","detailedBullets":["Point 1 [Doodle: icon]","Point 2","Point 3"]}
+
+Be friendly, use simple language and fun analogies.`
 
 /**
  * Summarizer Agent
@@ -11,23 +21,26 @@ export async function summarizeNotes(input: SummarizerInput): Promise<Summarizer
   console.log(`[SummarizerAgent] Processing file: ${input.title || 'Untitled'}`)
 
   try {
-    const response = await fetch('/api/summarize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        rawText: input.rawText,
-        title: input.title,
-      }),
-    })
+    // Limit text length to avoid token issues
+    const truncatedText = input.rawText.slice(0, 8000)
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Failed to summarize notes')
-    }
+    const userPrompt = `Summarize these notes${input.title ? ` (${input.title})` : ''}:
 
-    const result = await response.json()
+${truncatedText}
+
+Respond with ONLY valid JSON.`
+
+    const response = await callOpenAI([
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt }
+    ])
+
+    const result = parseJSONResponse<{
+      oneLiner: string
+      shortSummary: string
+      detailedBullets: string[]
+    }>(response)
+
     return {
       oneLiner: result.oneLiner,
       shortSummary: result.shortSummary,

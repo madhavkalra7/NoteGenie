@@ -6,8 +6,8 @@ import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import { convertAudioToNotes } from '@/agents/audioToNotesAgent'
 import { useApp } from '@/context/AppContext'
+import Link from 'next/link'
 
 export default function AudioNotesPage() {
   const router = useRouter()
@@ -16,6 +16,7 @@ export default function AudioNotesPage() {
   const [processing, setProcessing] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [result, setResult] = useState<any>(null)
+  const [transcriptionExpanded, setTranscriptionExpanded] = useState(false)
 
   // Redirect to login if not authenticated (only after ready)
   useEffect(() => {
@@ -80,33 +81,65 @@ export default function AudioNotesPage() {
     try {
       // Step 1: Transcribing
       setCurrentStep(1)
-      await new Promise(r => setTimeout(r, 1000))
+      
+      // Upload audio to API for transcription
+      const formData = new FormData()
+      formData.append('audio', audioFile)
+
+      console.log('Uploading audio file...')
+      const response = await fetch('/api/audio-to-notes', {
+        method: 'POST',
+        body: formData,
+      })
+
+      console.log('Response status:', response.status)
+      if (!response.ok) {
+        throw new Error('Failed to process audio')
+      }
+
+      const audioResult = await response.json()
+      console.log('Audio result:', audioResult)
+
+      // Validate result structure
+      if (!audioResult || !audioResult.summary) {
+        throw new Error('Invalid response format')
+      }
 
       // Step 2: Cleaning
       setCurrentStep(2)
-      await new Promise(r => setTimeout(r, 800))
+      await new Promise(r => setTimeout(r, 500))
 
       // Step 3: Summarizing
       setCurrentStep(3)
-      const audioResult = await convertAudioToNotes({ audioFile })
+      await new Promise(r => setTimeout(r, 500))
 
       // Step 4: Generating resources
       setCurrentStep(4)
       await new Promise(r => setTimeout(r, 500))
 
-      setResult(audioResult)
+      // First stop processing, then set result
+      setProcessing(false)
       
-      // Save to context with correct field names (snake_case for DB)
+      // Small delay to ensure state updates properly
+      await new Promise(r => setTimeout(r, 100))
+      
+      setResult(audioResult)
+      console.log('Result set:', audioResult)
+      
+      // Save to database with all audio notes data
       await addSummary({
         title: 'Lecture Notes from Audio',
-        raw_text: audioResult.cleanedText,
+        raw_text: audioResult.transcription, // Original transcription
         one_liner: audioResult.summary.oneLiner,
         short_summary: audioResult.summary.shortSummary,
         detailed_bullets: audioResult.summary.detailedBullets,
       })
+      
+      console.log('Audio notes saved to database ✅')
+      alert('🎉 Audio notes saved successfully!')
     } catch (error) {
       console.error('Error processing audio:', error)
-    } finally {
+      alert('Failed to process audio. Please try again.')
       setProcessing(false)
     }
   }
@@ -163,21 +196,44 @@ export default function AudioNotesPage() {
             <Card>
               <h2 className="section-title">📄 Original Transcription</h2>
               <div className="transcription-box">
-                <pre>{result.transcription}</pre>
-              </div>
-            </Card>
-
-            <Card>
-              <h2 className="section-title">✨ Cleaned Transcription</h2>
-              <div className="cleaned-box">
-                <p>{result.cleanedText}</p>
+                <p className={transcriptionExpanded ? 'expanded' : 'collapsed'}>
+                  {result.transcription}
+                </p>
+                {!transcriptionExpanded && result.transcription.length > 200 && (
+                  <button 
+                    className="show-more-btn"
+                    onClick={() => setTranscriptionExpanded(true)}
+                  >
+                    Show More ⋯
+                  </button>
+                )}
+                {transcriptionExpanded && (
+                  <button 
+                    className="show-more-btn"
+                    onClick={() => setTranscriptionExpanded(false)}
+                  >
+                    Show Less ↑
+                  </button>
+                )}
               </div>
             </Card>
 
             <Card>
               <h2 className="section-title">📝 Structured Notes</h2>
               <div className="structured-notes">
-                <pre>{result.structuredNotes}</pre>
+                {result.structuredNotes.split('\n').map((line: string, idx: number) => {
+                  if (line.startsWith('# ')) {
+                    return <h3 key={idx} className="notes-heading">{line.replace('# ', '')}</h3>
+                  } else if (line.startsWith('• ')) {
+                    return (
+                      <div key={idx} className="note-item">
+                        <span className="bullet">•</span>
+                        <p>{line.replace('• ', '')}</p>
+                      </div>
+                    )
+                  }
+                  return null
+                })}
               </div>
             </Card>
 
@@ -202,6 +258,51 @@ export default function AudioNotesPage() {
                 </div>
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* Audio Notes History */}
+        {!processing && (
+          <div className="history-section animate-fade-in">
+            <h2 className="section-title">🎤 Your Audio Notes History</h2>
+            {state.summaries.filter(s => s.title === 'Lecture Notes from Audio').length > 0 ? (
+              <div className="history-grid">
+                {state.summaries
+                  .filter(s => s.title === 'Lecture Notes from Audio')
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .map(summary => (
+                    <Link 
+                      key={summary.id} 
+                      href={`/summary/${summary.id}`}
+                      className="history-card"
+                    >
+                      <div className="history-card-header">
+                        <span className="audio-icon">🎤</span>
+                        <span className="history-date">
+                          {new Date(summary.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <div className="history-card-content">
+                        <p className="history-summary">{summary.one_liner}</p>
+                      </div>
+                    </Link>
+                  ))}
+              </div>
+            ) : (
+              <Card>
+                <div className="empty-history">
+                  <span className="empty-icon">📭</span>
+                  <p>No audio notes yet</p>
+                  <p className="empty-hint">Upload your first audio file to get started!</p>
+                </div>
+              </Card>
+            )}
           </div>
         )}
       </div>
@@ -342,23 +443,99 @@ export default function AudioNotesPage() {
           margin-top: var(--spacing-xl);
         }
 
-        .transcription-box,
-        .cleaned-box,
-        .structured-notes,
+        .transcription-box {
+          padding: var(--spacing-lg);
+          background: var(--color-bg-secondary);
+          border-radius: var(--radius-md);
+          position: relative;
+        }
+
+        .transcription-box p {
+          font-size: var(--font-size-sm);
+          line-height: var(--line-height-relaxed);
+          color: var(--color-text-secondary);
+          margin: 0;
+          white-space: pre-wrap;
+          word-wrap: break-word;
+        }
+
+        .transcription-box p.collapsed {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .transcription-box p.expanded {
+          display: block;
+        }
+
+        .show-more-btn {
+          background: none;
+          border: none;
+          color: var(--color-accent);
+          font-weight: var(--font-weight-medium);
+          cursor: pointer;
+          margin-top: var(--spacing-sm);
+          padding: var(--spacing-xs) 0;
+          font-size: var(--font-size-sm);
+          transition: opacity 0.2s;
+        }
+
+        .show-more-btn:hover {
+          opacity: 0.8;
+        }
+
+        .structured-notes {
+          padding: var(--spacing-xl);
+          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          border-radius: var(--radius-lg);
+          border-left: 4px solid var(--color-accent);
+        }
+
+        .notes-heading {
+          font-size: var(--font-size-xl);
+          font-weight: var(--font-weight-bold);
+          color: var(--color-text-primary);
+          margin-bottom: var(--spacing-lg);
+          padding-bottom: var(--spacing-sm);
+          border-bottom: 2px solid var(--color-accent);
+        }
+
+        .note-item {
+          display: flex;
+          gap: var(--spacing-md);
+          margin-bottom: var(--spacing-md);
+          padding: var(--spacing-md);
+          background: white;
+          border-radius: var(--radius-md);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .note-item:hover {
+          transform: translateX(4px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .note-item .bullet {
+          color: var(--color-accent);
+          font-size: var(--font-size-xl);
+          font-weight: var(--font-weight-bold);
+          flex-shrink: 0;
+        }
+
+        .note-item p {
+          margin: 0;
+          line-height: var(--line-height-relaxed);
+          color: var(--color-text-primary);
+        }
+
         .summary-box {
           padding: var(--spacing-lg);
           background: var(--color-bg-secondary);
           border-radius: var(--radius-md);
-        }
-
-        .transcription-box pre,
-        .structured-notes pre {
-          white-space: pre-wrap;
-          word-wrap: break-word;
-          font-family: var(--font-family);
-          font-size: var(--font-size-sm);
-          line-height: var(--line-height-relaxed);
-          color: var(--color-text-secondary);
         }
 
         .summary-item {
@@ -383,6 +560,88 @@ export default function AudioNotesPage() {
           margin-bottom: var(--spacing-xs);
           background: var(--color-card);
           border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+
+        /* History Section */
+        .history-section {
+          margin-top: var(--spacing-2xl);
+          padding-top: var(--spacing-2xl);
+          border-top: 2px solid var(--color-bg-secondary);
+        }
+
+        .history-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: var(--spacing-lg);
+          margin-top: var(--spacing-lg);
+        }
+
+        .history-card {
+          display: block;
+          padding: var(--spacing-lg);
+          background: white;
+          border: 3px solid #000;
+          border-radius: 12px;
+          text-decoration: none;
+          color: inherit;
+          box-shadow: 4px 4px 0 #000;
+          transition: all 0.2s;
+        }
+
+        .history-card:hover {
+          transform: translate(-2px, -2px);
+          box-shadow: 6px 6px 0 #000;
+        }
+
+        .history-card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: var(--spacing-md);
+          padding-bottom: var(--spacing-sm);
+          border-bottom: 2px solid #f0f0f0;
+        }
+
+        .audio-icon {
+          font-size: 1.5rem;
+          animation: pulse 2s infinite;
+        }
+
+        .history-date {
+          font-size: var(--font-size-sm);
+          color: var(--color-text-muted);
+          font-weight: var(--font-weight-medium);
+        }
+
+        .history-card-content {
+          line-height: 1.5;
+        }
+
+        .history-summary {
+          margin: 0;
+          color: var(--color-text-secondary);
+          font-size: var(--font-size-sm);
+        }
+
+        .empty-history {
+          text-align: center;
+          padding: var(--spacing-2xl);
+        }
+
+        .empty-icon {
+          font-size: 3rem;
+          display: block;
+          margin-bottom: var(--spacing-md);
+        }
+
+        .empty-history p {
+          margin: var(--spacing-xs) 0;
+          color: var(--color-text-secondary);
+        }
+
+        .empty-hint {
+          font-size: var(--font-size-sm);
+          color: var(--color-text-muted);
         }
 
         @keyframes pulse {

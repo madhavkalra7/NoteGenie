@@ -69,7 +69,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔄 Loading data for user:', userId)
       
-      const [summariesRes, flashcardsRes, conceptsRes, questionsRes, studyPlanRes, statsRes, historyRes] = await Promise.all([
+      const [summariesRes, flashcardsRes, conceptsRes, questionsRes, studyPlanRes, statsRes, historyRes, profileRes] = await Promise.all([
         db.getSummaries(userId),
         db.getFlashcards(userId),
         db.getConcepts(userId),
@@ -77,17 +77,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.getStudyPlan(userId),
         db.getStats(userId),
         db.getHistoryByDate(userId),
+        supabase.from('profiles').select('name').eq('id', userId).single(),
       ])
 
       // Log any errors
       if (summariesRes.error) console.error('❌ Error loading summaries:', summariesRes.error.message)
       if (flashcardsRes.error) console.error('❌ Error loading flashcards:', flashcardsRes.error.message)
       if (conceptsRes.error) console.error('❌ Error loading concepts:', conceptsRes.error.message)
+      if (profileRes.error) console.error('❌ Error loading profile:', profileRes.error.message)
 
-      console.log('✅ Data loaded - Summaries:', summariesRes.data?.length || 0, 'Flashcards:', flashcardsRes.data?.length || 0)
+      console.log('✅ Data loaded - Summaries:', summariesRes.data?.length || 0, 'Flashcards:', flashcardsRes.data?.length || 0, 'Profile:', profileRes.data?.name || 'No name')
 
       setState(prev => ({
         ...prev,
+        user: prev.user ? { ...prev.user, user_metadata: { ...prev.user.user_metadata, name: profileRes.data?.name || prev.user.email } } : prev.user,
         summaries: summariesRes.data || [],
         flashcards: flashcardsRes.data || [],
         concepts: conceptsRes.data || [],
@@ -164,8 +167,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await db.signOut()
-    setState(initialState)
+    console.log('🟡 AppContext signOut called')
+    try {
+      console.log('🟡 Calling db.signOut()')
+      const { error } = await db.signOut()
+      if (error) {
+        console.error('❌ DB Logout error:', error)
+      } else {
+        console.log('✅ DB signOut successful')
+      }
+    } catch (err) {
+      console.error('❌ Logout exception:', err)
+    } finally {
+      console.log('🟡 Resetting state')
+      setState(initialState)
+    }
   }
 
   // Data operations

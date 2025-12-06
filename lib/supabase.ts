@@ -3,7 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: {
+    schema: 'public',
+  },
+  global: {
+    headers: {
+      'x-client-info': 'notegenie-app',
+    },
+  },
+})
 
 // Database Types
 export interface DbUser {
@@ -115,7 +124,21 @@ export const db = {
   },
 
   async signOut() {
-    return supabase.auth.signOut()
+    console.log('🟢 Supabase signOut called')
+    try {
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('SignOut timeout')), 5000)
+      )
+      const signOutPromise = supabase.auth.signOut()
+      const result = await Promise.race([signOutPromise, timeoutPromise])
+      console.log('🟢 Supabase signOut result:', result)
+      return result
+    } catch (error) {
+      console.error('🟢 Supabase signOut error:', error)
+      // Return success anyway to allow logout to proceed
+      return { error: null }
+    }
   },
 
   // Summaries
@@ -146,6 +169,11 @@ export const db = {
         .single()
       
       console.log('🔵 Supabase INSERT result:', { data: data?.id, error: error?.message })
+      
+      if (error) {
+        console.error('🔴 Supabase INSERT error details:', error)
+      }
+      
       return { data, error }
     } catch (e: any) {
       console.error('🔴 Supabase INSERT exception:', e.message)
@@ -178,14 +206,30 @@ export const db = {
 
   async addFlashcards(flashcards: Omit<DbFlashcard, 'id' | 'created_at'>[]) {
     console.log('🔵 Supabase INSERT flashcards starting...', flashcards.length)
+    
+    // Split into smaller batches to avoid timeout
+    const batchSize = 50
+    const batches = []
+    for (let i = 0; i < flashcards.length; i += batchSize) {
+      batches.push(flashcards.slice(i, i + batchSize))
+    }
+    
     try {
-      const { data, error } = await supabase
-        .from('flashcards')
-        .insert(flashcards)
-        .select()
+      const results = []
+      for (const batch of batches) {
+        const { data, error } = await supabase
+          .from('flashcards')
+          .insert(batch)
+          .select()
+        
+        if (error) {
+          console.error('🔴 Batch insert error:', error)
+        }
+        results.push(...(data || []))
+      }
       
-      console.log('🔵 Supabase INSERT flashcards result:', { count: data?.length, error: error?.message })
-      return { data, error }
+      console.log('🔵 Supabase INSERT flashcards result:', { count: results.length })
+      return { data: results, error: null }
     } catch (e: any) {
       console.error('🔴 Supabase INSERT flashcards exception:', e.message)
       return { data: null, error: e }
@@ -222,11 +266,26 @@ export const db = {
   },
 
   async addConcepts(concepts: Omit<DbConcept, 'id' | 'created_at'>[]) {
-    const { data, error } = await supabase
-      .from('concepts')
-      .insert(concepts)
-      .select()
-    return { data, error }
+    // Split into batches of 50 to avoid timeout
+    const batchSize = 50
+    const allData: any[] = []
+    let lastError = null
+
+    for (let i = 0; i < concepts.length; i += batchSize) {
+      const batch = concepts.slice(i, i + batchSize)
+      const { data, error } = await supabase
+        .from('concepts')
+        .insert(batch)
+        .select()
+      
+      if (error) {
+        lastError = error
+      } else if (data) {
+        allData.push(...data)
+      }
+    }
+
+    return { data: allData.length > 0 ? allData : null, error: lastError }
   },
 
   // Questions
@@ -249,11 +308,26 @@ export const db = {
   },
 
   async addQuestions(questions: Omit<DbQuestion, 'id' | 'created_at'>[]) {
-    const { data, error } = await supabase
-      .from('questions')
-      .insert(questions)
-      .select()
-    return { data, error }
+    // Split into batches of 50 to avoid timeout
+    const batchSize = 50
+    const allData: any[] = []
+    let lastError = null
+
+    for (let i = 0; i < questions.length; i += batchSize) {
+      const batch = questions.slice(i, i + batchSize)
+      const { data, error } = await supabase
+        .from('questions')
+        .insert(batch)
+        .select()
+      
+      if (error) {
+        lastError = error
+      } else if (data) {
+        allData.push(...data)
+      }
+    }
+
+    return { data: allData.length > 0 ? allData : null, error: lastError }
   },
 
   // Study Plan
@@ -269,12 +343,27 @@ export const db = {
   async setStudyPlan(userId: string, tasks: Omit<DbStudyTask, 'id' | 'created_at'>[]) {
     // Delete existing tasks
     await supabase.from('study_tasks').delete().eq('user_id', userId)
-    // Insert new tasks
-    const { data, error } = await supabase
-      .from('study_tasks')
-      .insert(tasks)
-      .select()
-    return { data, error }
+    
+    // Split into batches of 50 to avoid timeout
+    const batchSize = 50
+    const allData: any[] = []
+    let lastError = null
+
+    for (let i = 0; i < tasks.length; i += batchSize) {
+      const batch = tasks.slice(i, i + batchSize)
+      const { data, error } = await supabase
+        .from('study_tasks')
+        .insert(batch)
+        .select()
+      
+      if (error) {
+        lastError = error
+      } else if (data) {
+        allData.push(...data)
+      }
+    }
+
+    return { data: allData.length > 0 ? allData : null, error: lastError }
   },
 
   async updateStudyTask(id: string, updates: Partial<DbStudyTask>) {
@@ -318,6 +407,7 @@ export const db = {
       supabase.from('concepts').select('*').eq('summary_id', summaryId),
       supabase.from('questions').select('*').eq('summary_id', summaryId),
     ])
+
     return {
       summary: summaryRes.data,
       flashcards: flashcardsRes.data || [],

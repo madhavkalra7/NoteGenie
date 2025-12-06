@@ -10,6 +10,14 @@ import { useApp } from '@/context/AppContext'
 export default function SettingsPage() {
   const router = useRouter()
   const { clearAll, state, isReady, signOut } = useApp()
+  const [nickname, setNickname] = useState('')
+  const [savingName, setSavingName] = useState(false)
+
+  useEffect(() => {
+    if (state.user) {
+      setNickname(state.user.user_metadata?.name || '')
+    }
+  }, [state.user])
 
   // Redirect to login if not authenticated (only after ready)
   useEffect(() => {
@@ -83,6 +91,37 @@ export default function SettingsPage() {
     router.push('/auth/login')
   }
 
+  const handleSaveName = async () => {
+    if (!nickname.trim()) return
+
+    setSavingName(true)
+    try {
+      // Call API to update profile
+      const response = await fetch('/api/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: state.user!.id,
+          email: state.user!.email,
+          name: nickname.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update profile')
+      }
+
+      alert('✅ Name updated successfully!')
+      window.location.reload()
+    } catch (error) {
+      console.error('Error saving name:', error)
+      alert('Failed to save name. Please try again.')
+    } finally {
+      setSavingName(false)
+    }
+  }
+
   return (
     <PageLayout>
       <div className="settings-page">
@@ -90,6 +129,33 @@ export default function SettingsPage() {
         <p className="page-subtitle">Configure your NoteGenie preferences</p>
 
         <div className="settings-grid">
+          {/* Profile Settings */}
+          <Card title="Profile Settings">
+            <div className="setting-item">
+              <div className="setting-info">
+                <h3>Display Name</h3>
+                <p>This name will be displayed instead of your email.</p>
+              </div>
+              <div className="name-input-group">
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Enter your name..."
+                  className="name-input"
+                  maxLength={50}
+                />
+                <Button 
+                  onClick={handleSaveName} 
+                  disabled={!nickname.trim() || savingName}
+                  loading={savingName}
+                >
+                  {savingName ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+
           {/* Data Management */}
           <Card title="Data Management">
             <div className="setting-item">
@@ -195,10 +261,17 @@ export default function SettingsPage() {
           align-items: center;
           padding: var(--spacing-md) 0;
           border-bottom: 1px dashed #ccc;
+          flex-wrap: wrap;
+          gap: var(--spacing-md);
         }
 
         .setting-item:last-child {
           border-bottom: none;
+        }
+
+        .setting-info {
+          flex: 1;
+          min-width: 200px;
         }
 
         .setting-info h3 {
@@ -210,6 +283,29 @@ export default function SettingsPage() {
         .setting-info p {
           font-size: var(--font-size-sm);
           color: var(--color-text-secondary);
+        }
+
+        .name-input-group {
+          display: flex;
+          gap: var(--spacing-sm);
+          flex: 1;
+          min-width: 300px;
+        }
+
+        .name-input {
+          flex: 1;
+          padding: var(--spacing-md);
+          font-size: var(--font-size-md);
+          border: 3px solid #000;
+          border-radius: var(--radius-md);
+          font-family: var(--font-body);
+          transition: all 0.2s;
+        }
+
+        .name-input:focus {
+          outline: none;
+          border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .about-content {

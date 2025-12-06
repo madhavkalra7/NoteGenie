@@ -2,64 +2,98 @@ import {
   AudioToNotesInput,
   AudioToNotesOutput,
 } from './types'
-import { summarizeNotes } from './summarizerAgent'
+import Groq from 'groq-sdk'
+import { toFile } from 'groq-sdk/uploads'
+import { callGroq, parseJSONResponse } from '@/lib/groq'
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+})
+
+const SUMMARIZER_PROMPT = `You are DoodleBot, a fun AI study companion. Summarize notes in JSON format.
+
+IMPORTANT: Respond with ONLY valid JSON, no other text.
+
+Required format:
+{"oneLiner":"Catchy summary with emoji 🎯","shortSummary":"2-3 sentence overview","detailedBullets":["Point 1 [Doodle: icon]","Point 2","Point 3"]}
+
+Be friendly, use simple language and fun analogies.`
 
 /**
  * Audio to Notes Agent
- * Transcribes audio, cleans it, and structures into notes
+ * Transcribes audio using Groq's Whisper API, cleans it, and structures into notes
  * 
- * Note: For full audio transcription, you would need to:
- * 1. Upload audio to a service like OpenAI Whisper API
- * 2. Get the transcription
- * 3. Process and structure the notes
- * 
- * This implementation provides a framework - actual audio transcription
- * requires additional API integration (e.g., OpenAI Whisper)
+ * Uses Groq's whisper-large-v3 model (FREE) for fast and accurate transcription
  */
 export async function convertAudioToNotes(
   input: AudioToNotesInput
 ): Promise<AudioToNotesOutput> {
   console.log('[AudioToNotesAgent] Processing audio file...')
 
-  // Note: Full implementation would require:
-  // 1. Uploading audio file to Whisper API
-  // 2. Getting transcription back
-  // For now, we'll show a message about this limitation
+  try {
+    // Transcribe audio using Groq's Whisper API
+    console.log('[AudioToNotesAgent] Sending audio to Groq Whisper API...')
+    
+    // Convert File to the format Groq expects
+    const audioFile = await toFile(input.audioFile, input.audioFile.name)
+    
+    const transcription = await groq.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-large-v3',
+      language: 'en', // Can be changed or auto-detected
+      response_format: 'text',
+    })
+
+    const transcribedText = typeof transcription === 'string' ? transcription : transcription.text
+    console.log('[AudioToNotesAgent] Transcription complete!')
+
+    // Clean filler words from transcription
+    const fillerWords = ['um', 'uh', 'like', 'you know', 'basically', 'okay', 'right', 'so,']
+    let cleanedText = transcribedText
+    fillerWords.forEach(filler => {
+      const regex = new RegExp(`\\b${filler}\\b,?\\s*`, 'gi')
+      cleanedText = cleanedText.replace(regex, '')
+      })
   
-  const mockTranscription = `[Audio Transcription Feature]
-  
-To enable full audio transcription:
-1. This feature requires OpenAI Whisper API integration
-2. Audio files need to be uploaded to the API
-3. The transcription is then returned
+    // Structure into proper notes
+    const structuredNotes = cleanedText
+      .split('.')
+      .filter(s => s.trim().length > 10)
+      .map(sentence => `• ${sentence.trim()}.`)
+      .join('\n')
 
-For now, please use the text input method or copy-paste your lecture notes.
+    // Generate summary using Groq (FREE)
+    console.log('[AudioToNotesAgent] Generating summary with Groq...')
+    const truncatedText = cleanedText.slice(0, 8000)
+    const summaryPrompt = `Summarize these notes (Audio Notes):
 
-Example of what transcription would look like:
-"Today we discussed machine learning fundamentals. Machine learning is a subset of AI that enables systems to learn from data. There are different types including supervised learning with labeled data and unsupervised learning for unlabeled data."`
+${truncatedText}
 
-  // Clean filler words (would work on real transcription)
-  const fillerWords = ['um', 'uh', 'like', 'you know', 'basically', 'okay', 'right', 'so,']
-  let cleanedText = mockTranscription
-  fillerWords.forEach(filler => {
-    const regex = new RegExp(`\\b${filler}\\b,?\\s*`, 'gi')
-    cleanedText = cleanedText.replace(regex, '')
-  })
-  
-  // Structure into proper notes
-  const structuredNotes = cleanedText
-    .split('.')
-    .filter(s => s.trim().length > 10)
-    .map(sentence => `• ${sentence.trim()}.`)
-    .join('\n')
+Respond with ONLY valid JSON.`
 
-  // Generate summary using summarizer agent
-  const summary = await summarizeNotes({ rawText: cleanedText, title: 'Audio Notes' })
+    const summaryResponse = await callGroq([
+      { role: 'system', content: SUMMARIZER_PROMPT },
+      { role: 'user', content: summaryPrompt }
+    ])
 
-  return {
-    transcription: mockTranscription,
-    cleanedText,
-    structuredNotes: `# Lecture Notes from Audio\n\n${structuredNotes}`,
-    summary,
+    const summary = parseJSONResponse<{
+      oneLiner: string
+      shortSummary: string
+      detailedBullets: string[]
+    }>(summaryResponse)
+
+    return {
+      transcription: transcribedText,
+      cleanedText,
+      structuredNotes: `# Lecture Notes from Audio\n\n${structuredNotes}`,
+      summary: {
+        oneLiner: summary.oneLiner,
+        shortSummary: summary.shortSummary,
+        detailedBullets: summary.detailedBullets,
+      },
+    }
+  } catch (error) {
+    console.error('[AudioToNotesAgent] Error:', error)
+    throw new Error('Failed to transcribe audio. Please try again.')
   }
 }

@@ -18,13 +18,12 @@ export default function Navbar() {
   }, [])
 
   const handleSignOut = async () => {
-    try {
-      await signOut()
-    } catch (e) {
-      console.error('Logout error:', e)
-    }
-    // Force full page reload to clear all state
-    window.location.replace('/auth/login')
+    console.log('🔴 Logout button clicked')
+    // Start signOut but don't wait for it
+    signOut().catch(e => console.error('❌ Logout error:', e))
+    // Immediately redirect
+    console.log('✅ Redirecting to login...')
+    window.location.href = '/auth/login'
   }
 
   const handleUpsideDownClick = () => {
@@ -46,7 +45,7 @@ export default function Navbar() {
       <div className="navbar-left">
         {state.user ? (
           <div className="user-menu">
-            <span className="user-email">{state.user.email}</span>
+            <span className="user-email">{state.user.user_metadata?.name || state.user.email}</span>
             <button onClick={handleSignOut} className="logout-btn">
               ✌️ LOGOUT ✌️
             </button>
@@ -118,13 +117,28 @@ export default function Navbar() {
         .user-menu {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 15px;
         }
 
         .user-email {
           font-family: 'Patrick Hand', cursive;
-          font-size: 1.1rem;
+          font-size: 1.3rem;
+          font-weight: bold;
           color: #000;
+          padding: 14px 24px;
+          background: #ffeb3b;
+          border: 4px solid #000;
+          border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+          box-shadow: 4px 4px 0px 0px black;
+          letter-spacing: 2px;
+          transition: all 0.2s;
+          cursor: default;
+        }
+
+        .user-email:hover {
+          transform: translate(-2px, -2px);
+          box-shadow: 6px 6px 0px 0px black;
+          background: #fff59d;
         }
 
         .logout-btn {
@@ -135,6 +149,7 @@ export default function Navbar() {
           font-family: 'Patrick Hand', cursive;
           font-size: 1.3rem;
           font-weight: bold;
+          color: #000;
           cursor: pointer;
           box-shadow: 4px 4px 0px 0px black;
           letter-spacing: 2px;

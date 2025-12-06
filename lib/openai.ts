@@ -19,6 +19,10 @@ export async function callOpenAI(
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY
 
+  console.log('[OpenAI Debug] API Key exists?', !!apiKey)
+  console.log('[OpenAI Debug] API Key length?', apiKey?.length || 0)
+  console.log('[OpenAI Debug] All env keys:', Object.keys(process.env).filter(k => k.includes('OPENAI')))
+
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY is not set in environment variables')
   }

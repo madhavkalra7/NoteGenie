@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import PageLayout from '@/components/layout/PageLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import AgentTimeline from '@/components/AgentTimeline'
 import { useApp } from '@/context/AppContext'
-import { summarizeNotes } from '@/agents/summarizerAgent'
-import { extractConcepts } from '@/agents/conceptExtractorAgent'
 import { detectDifficulty } from '@/agents/difficultyDetectorAgent'
 
 export default function NotesPage() {
@@ -80,14 +79,36 @@ export default function NotesPage() {
     setAgentSteps([...steps])
 
     try {
-      // Step 1: Summarize
-      const summary = await summarizeNotes({ rawText: noteText, title: 'My Notes' })
+      // Step 1: Summarize via API
+      const summaryResponse = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawText: noteText, title: noteTitle || 'My Notes' })
+      })
+      
+      if (!summaryResponse.ok) {
+        const error = await summaryResponse.json()
+        throw new Error(error.error || 'Failed to summarize')
+      }
+      
+      const summary = await summaryResponse.json()
       steps[0].status = 'completed'
       steps[1].status = 'processing'
       setAgentSteps([...steps])
 
-      // Step 2: Extract Concepts
-      const { concepts: rawConcepts } = await extractConcepts({ text: noteText })
+      // Step 2: Extract Concepts via API
+      const conceptsResponse = await fetch('/api/extract-concepts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: noteText })
+      })
+      
+      if (!conceptsResponse.ok) {
+        const error = await conceptsResponse.json()
+        throw new Error(error.error || 'Failed to extract concepts')
+      }
+      
+      const { concepts: rawConcepts } = await conceptsResponse.json()
       steps[1].status = 'completed'
       steps[2].status = 'processing'
       setAgentSteps([...steps])
@@ -97,46 +118,57 @@ export default function NotesPage() {
       steps[2].status = 'completed'
       setAgentSteps([...steps])
 
-      // Save to database with correct field names
+      console.log('✅ All processing complete, setting result...')
+      
+      // Set result FIRST to show it immediately
+      setResult({
+        summary,
+        concepts: taggedConcepts,
+        summaryId: null, // Will be set after save
+      })
+      
+      // Then save to database in background (don't wait)
       const title = noteTitle.trim() || 'My Notes'
       
       console.log('💾 Saving summary to database...')
       
-      // Add summary first to get the ID
-      const savedSummary = await addSummary({
+      // Save in background without blocking UI
+      addSummary({
         title: title,
         raw_text: noteText,
         one_liner: summary.oneLiner,
         short_summary: summary.shortSummary,
         detailed_bullets: summary.detailedBullets,
+      }).then(savedSummary => {
+        console.log('💾 Saved summary result:', savedSummary)
+        
+        if (savedSummary) {
+          const summaryId = savedSummary.id
+          
+          // Add concepts with correct format
+          const dbConcepts = taggedConcepts.map((c: any) => ({
+            summary_id: summaryId || null,
+            term: c.term,
+            definition: c.definition,
+            category: c.category || null,
+            difficulty: c.difficulty || 'medium',
+          }))
+          addConcepts(dbConcepts, summaryId || undefined)
+          
+          // Update result with summaryId
+          setResult((prev: { summary: any; concepts: any[]; summaryId: string | null } | null) => 
+            prev ? { ...prev, summaryId } : null
+          )
+        }
+      }).catch(err => {
+        console.error('❌ Background save failed:', err)
       })
 
-      console.log('💾 Saved summary result:', savedSummary)
-
-      if (!savedSummary) {
-        console.error('❌ Failed to save summary to database')
-      }
-
-      const summaryId = savedSummary?.id
-
-      // Add concepts with correct format
-      const dbConcepts = taggedConcepts.map((c: any) => ({
-        summary_id: summaryId || null,
-        term: c.term,
-        definition: c.definition,
-        category: c.category || null,
-        difficulty: c.difficulty || 'medium',
-      }))
-      await addConcepts(dbConcepts, summaryId || undefined)
-
-      setResult({
-        summary,
-        concepts: taggedConcepts,
-        summaryId: savedSummary?.id,
-      })
+      console.log('✅ Result state set successfully')
     } catch (error) {
       console.error('Error processing notes:', error)
     } finally {
+      console.log('🏁 Setting processing to false')
       setProcessing(false)
     }
   }
@@ -308,6 +340,34 @@ export default function NotesPage() {
               </div>
             </Card>
           </div>
+        )}
+
+        {/* History Section */}
+        {!processing && !result && state.summaries && state.summaries.length > 0 && (
+          <Card className="history-card">
+            <h2 className="section-title">📚 Your Summarized Notes</h2>
+            <div className="history-grid">
+              {state.summaries
+                .filter((s: any) => s.title !== 'Lecture Notes from Audio')
+                .slice(0, 6)
+                .map((summary: any) => (
+                  <Link
+                    key={summary.id}
+                    href={`/summary/${summary.id}`}
+                    className="history-item"
+                  >
+                    <div className="history-icon">📝</div>
+                    <div className="history-content">
+                      <h3>{summary.title || 'Untitled Note'}</h3>
+                      <p>{summary.one_liner}</p>
+                      <span className="history-date">
+                        {new Date(summary.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </Link>
+              ))}
+            </div>
+          </Card>
         )}
       </div>
 
@@ -552,6 +612,77 @@ export default function NotesPage() {
           font-size: var(--font-size-sm);
           color: var(--color-text-muted);
           text-align: center;
+        }
+
+        .history-card {
+          margin-top: var(--spacing-2xl);
+        }
+
+        .history-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: var(--spacing-lg);
+        }
+
+        .history-item {
+          display: flex;
+          gap: var(--spacing-md);
+          padding: var(--spacing-lg);
+          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          border: 3px solid #000;
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          transition: all var(--transition-fast);
+          box-shadow: 3px 3px 0px 0px black;
+          text-decoration: none;
+        }
+
+        .history-item:hover {
+          transform: translate(-2px, -2px);
+          box-shadow: 5px 5px 0px 0px black;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .history-item:hover h3,
+        .history-item:hover p,
+        .history-item:hover .history-date {
+          color: #fff;
+        }
+
+        .history-icon {
+          font-size: 2rem;
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        .history-content {
+          flex: 1;
+        }
+
+        .history-content h3 {
+          font-size: var(--font-size-lg);
+          font-weight: var(--font-weight-semibold);
+          margin-bottom: var(--spacing-xs);
+          color: var(--color-text-primary);
+        }
+
+        .history-content p {
+          font-size: var(--font-size-sm);
+          color: var(--color-text-secondary);
+          margin-bottom: var(--spacing-xs);
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .history-date {
+          font-size: var(--font-size-xs);
+          color: var(--color-text-muted);
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
         }
 
         @keyframes fadeIn {

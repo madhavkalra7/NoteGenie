@@ -26,13 +26,30 @@ export default function SummaryDetailPage() {
   }, [isReady, state.user, summaryId])
 
   const loadData = async () => {
-    setLoading(true)
-    const result = await getSummaryWithData(summaryId)
-    setData(result)
-    setLoading(false)
+    try {
+      setLoading(true)
+      const result = await getSummaryWithData(summaryId)
+      setData(result)
+    } catch (error) {
+      console.error('Error loading summary:', error)
+      setData(null)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (!isReady || loading) {
+  if (!isReady) {
+    return (
+      <PageLayout>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Initializing...</p>
+        </div>
+      </PageLayout>
+    )
+  }
+
+  if (loading) {
     return (
       <PageLayout>
         <div className="loading-state">

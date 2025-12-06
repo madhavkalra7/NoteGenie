@@ -5,6 +5,7 @@ import './upside-down.css'
 import { AppProvider } from '@/context/AppContext'
 import { UpsideDownProvider } from '@/context/UpsideDownContext'
 import FloatingDoodles from '@/components/FloatingDoodles'
+import NicknameModal from '@/components/NicknameModal'
 
 const inter = Inter({ subsets: ['latin'] })
 const creepster = Creepster({ 
@@ -31,6 +32,7 @@ export default function RootLayout({
           <AppProvider>
             {/* Floating Doodle Sketches Background */}
             <FloatingDoodles />
+            <NicknameModal />
             {children}
           </AppProvider>
         </UpsideDownProvider>

@@ -86,7 +86,7 @@ export default function DashboardPage() {
         {/* Welcome Header */}
         <div className="welcome-header animate-fade-in">
           <div className="welcome-text">
-            <h1 className="page-title">Welcome back! 👋</h1>
+            <h1 className="page-title">Welcome back{state.user.user_metadata?.name ? `, ${state.user.user_metadata.name}` : ''}! 👋</h1>
             <p className="page-subtitle">{state.user.email}</p>
           </div>
         </div>
@@ -213,14 +213,21 @@ export default function DashboardPage() {
                         key={item.id} 
                         className="history-item"
                       >
-                        <div className="item-title">{item.title || 'Untitled Note'}</div>
-                        <div className="item-summary">{item.one_liner}</div>
-                        <div className="item-time">
-                          {new Date(item.created_at).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                        <div className="item-header">
+                          <div className="item-title">
+                            {item.title === 'Lecture Notes from Audio' && (
+                              <span className="audio-badge" title="Audio Notes">🎤</span>
+                            )}
+                            {item.title || 'Untitled Note'}
+                          </div>
+                          <div className="item-time">
+                            {new Date(item.created_at).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
                         </div>
+                        <div className="item-summary">{item.one_liner}</div>
                       </Link>
                     ))}
                   </div>
@@ -535,23 +542,44 @@ export default function DashboardPage() {
           transform: translateX(4px);
         }
 
+        .item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 6px;
+          gap: 12px;
+        }
+
         .item-title {
           font-weight: 600;
           font-size: 1rem;
-          margin-bottom: 6px;
           color: #333;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+        }
+
+        .audio-badge {
+          font-size: 1.2rem;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+
+        .item-time {
+          font-size: 0.85rem;
+          color: #888;
+          white-space: nowrap;
         }
 
         .item-summary {
           font-size: 0.9rem;
           color: #666;
-          margin-bottom: 8px;
           line-height: 1.4;
-        }
-
-        .item-time {
-          font-size: 0.8rem;
-          color: #999;
         }
 
         @keyframes fadeIn {
