@@ -22,6 +22,7 @@ create table if not exists public.summaries (
   one_liner text not null,
   short_summary text not null,
   detailed_bullets text[] not null default '{}',
+  source_type text default 'text' check (source_type in ('text', 'audio', 'youtube')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

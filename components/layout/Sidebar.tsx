@@ -12,6 +12,7 @@ export default function Sidebar() {
     { href: '/dashboard', icon: '📊', label: 'Dashboard', color: '#ff6b6b', gradient: 'linear-gradient(135deg, #ff6b6b, #ffa500)' },
     { href: '/notes', icon: '✏️', label: 'Summarize Notes', color: '#4ecdc4', gradient: 'linear-gradient(135deg, #4ecdc4, #44a08d)' },
     { href: '/audio-notes', icon: '🎙️', label: 'Audio to Notes', color: '#a855f7', gradient: 'linear-gradient(135deg, #a855f7, #6366f1)' },
+    { href: '/youtube-notes', icon: '🎥', label: 'YouTube to Notes', color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)' },
     { href: '/flashcards', icon: '⚡', label: 'Flashcards & Quiz', color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)' },
     { href: '/study-plan', icon: '🎯', label: 'Study Plan', color: '#10b981', gradient: 'linear-gradient(135deg, #10b981, #14b8a6)' },
     { href: '/concept-graph', icon: '🔮', label: 'Concept Graph', color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)' },

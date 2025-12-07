@@ -13,6 +13,7 @@ export default function DoodleDropdown() {
     { href: '/dashboard', label: '📊 DASHBOARD' },
     { href: '/notes', label: '📝 NOTES' },
     { href: '/audio-notes', label: '🎤 AUDIO NOTES' },
+    { href: '/youtube-notes', label: '🎥 YOUTUBE NOTES' },
     { href: '/flashcards', label: '🔖 FLASHCARDS' },
     { href: '/concept-graph', label: '🧠 MIND MAP' },
     { href: '/study-plan', label: '📅 STUDY PLAN' },

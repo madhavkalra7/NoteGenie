@@ -32,6 +32,7 @@ export interface DbSummary {
   short_summary: string
   detailed_bullets: string[]
   created_at: string
+  source_type?: 'text' | 'audio' | 'youtube'
 }
 
 export interface DbFlashcard {
