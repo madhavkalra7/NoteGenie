@@ -123,11 +123,11 @@ export const db = {
     })
   },
 
-  async signOut() {
+  async signOut(): Promise<{ error: any } | any> {
     console.log('🟢 Supabase signOut called')
     try {
       // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('SignOut timeout')), 5000)
       )
       const signOutPromise = supabase.auth.signOut()

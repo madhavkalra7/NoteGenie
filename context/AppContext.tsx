@@ -170,9 +170,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     console.log('🟡 AppContext signOut called')
     try {
       console.log('🟡 Calling db.signOut()')
-      const { error } = await db.signOut()
-      if (error) {
-        console.error('❌ DB Logout error:', error)
+      const result = await db.signOut()
+      if (result && 'error' in result && result.error) {
+        console.error('❌ DB Logout error:', result.error)
       } else {
         console.log('✅ DB signOut successful')
       }

@@ -23,7 +23,7 @@ export default function SummaryDetailPage() {
     if (isReady && state.user) {
       loadData()
     }
-  }, [isReady, state.user, summaryId])
+  }, [summaryId, isReady])
 
   const loadData = async () => {
     try {
