@@ -53,16 +53,21 @@ export async function fetchYouTubeTranscript(videoId: string): Promise<YouTubeTr
     // Get transcript
     const transcriptData = await info.getTranscript()
     
-    if (!transcriptData || !transcriptData.transcript) {
+    if (!transcriptData || !transcriptData.transcript || !transcriptData.transcript.content) {
       throw new Error('NO_CAPTIONS')
     }
 
     console.log('✅ Captions found!')
 
     // Combine all text segments
-    const fullText = transcriptData.transcript.content.body.initial_segments
-      .map((segment: any) => segment.snippet.text)
-      .join(' ')
+    const content = transcriptData.transcript.content
+    const fullText = content?.body?.initial_segments
+      ?.map((segment: any) => segment.snippet.text)
+      .join(' ') || ''
+
+    if (!fullText) {
+      throw new Error('NO_CAPTIONS')
+    }
 
     const duration = Math.floor((info.basic_info.duration || 0))
 
