@@ -49,7 +49,7 @@ async function generateChapterContent(
   const styleGuide = categoryPrompts[category] || 'Write in an engaging narrative style.';
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: process.env.NEXT_PUBLIC_AI_MODEL || 'gpt-5.6-terra',
     messages: [
       {
         role: 'system',
@@ -99,7 +99,7 @@ Write a complete, detailed chapter of approximately 2500 words. Include vivid de
 // Generate chapter summary for continuity
 async function generateChapterSummary(chapterContent: string): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: process.env.NEXT_PUBLIC_AI_MODEL || 'gpt-5.6-terra',
     messages: [
       {
         role: 'system',
@@ -120,7 +120,7 @@ async function generateChapterSummary(chapterContent: string): Promise<string> {
 // Generate book outline
 async function generateBookOutline(title: string, category: string, prompt: string, chapterCount: number = 18): Promise<string[]> {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: process.env.NEXT_PUBLIC_AI_MODEL || 'gpt-5.6-terra',
     messages: [
       {
         role: 'system',

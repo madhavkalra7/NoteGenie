@@ -11,7 +11,7 @@ export interface ChatCompletionOptions {
   max_completion_tokens?: number
 }
 
-const DEFAULT_MODEL = 'gpt-5-mini-2025-08-07'
+const DEFAULT_MODEL = 'gpt-5.6-terra'
 
 export async function callOpenAI(
   messages: ChatMessage[],
