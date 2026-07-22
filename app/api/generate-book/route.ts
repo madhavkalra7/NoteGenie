@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import connectToDatabase from '@/lib/mongodb';
+import GeneratedBook from '@/lib/models/GeneratedBook';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Create Supabase client for server-side
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 interface BookChapter {
   title: string;
@@ -446,27 +442,22 @@ export async function POST(request: NextRequest) {
       // Create book record in database if userId provided
       if (userId) {
         console.log(`📁 Creating book record in database for user: ${userId}`);
-        const { data: bookRecord, error: insertError } = await supabase
-          .from('generated_books')
-          .insert({
+        try {
+          await connectToDatabase();
+          const bookRecord = await GeneratedBook.create({
             user_id: userId,
             title,
             category,
             prompt,
+            chapter_count: targetChapterCount,
+            page_count: 0,
             status: 'generating',
-          })
-          .select('id')
-          .single();
-
-        if (insertError) {
-          console.error('❌ Database insert error:', insertError.message);
-          console.error('   Code:', insertError.code);
-          console.error('   Details:', insertError.details);
-          console.error('   Hint:', insertError.hint);
-          // Continue without database - book will still generate
-        } else if (bookRecord) {
-          bookId = bookRecord.id;
+            created_at: new Date()
+          });
+          bookId = bookRecord._id.toString();
           console.log(`✅ Book record created with ID: ${bookId}`);
+        } catch (insertError: any) {
+          console.error('❌ Database insert error:', insertError.message);
         }
       }
 
@@ -564,21 +555,17 @@ export async function POST(request: NextRequest) {
       // Update database with completed book AND save PDF data
       if (bookId) {
         console.log(`💾 Saving PDF to database for book: ${bookId}`);
-        const { error: updateError } = await supabase
-          .from('generated_books')
-          .update({
+        try {
+          await connectToDatabase();
+          await GeneratedBook.findByIdAndUpdate(bookId, {
             status: 'completed',
             chapter_count: chapters.length,
             page_count: pageCount,
             pdf_data: pdfBase64,
-          })
-          .eq('id', bookId);
-        
-        if (updateError) {
-          console.error('❌ Error saving PDF to database:', updateError.message);
-          console.error('   Error details:', JSON.stringify(updateError));
-        } else {
+          });
           console.log('✅ PDF saved to database successfully');
+        } catch (updateError: any) {
+          console.error('❌ Error saving PDF to database:', updateError.message);
         }
       } else {
         console.error('❌ No bookId available to save PDF!');
@@ -636,16 +623,19 @@ export async function GET(request: NextRequest) {
     
     console.log(`📖 Fetching PDF for book: ${bookId}, returnAs: ${returnAs || 'json'}`);
     
-    const { data: book, error } = await supabase
-      .from('generated_books')
-      .select('id, title, category, chapter_count, page_count, status, pdf_data, created_at')
-      .eq('id', bookId)
-      .single();
+    await connectToDatabase();
+    const rawBook = await GeneratedBook.findById(bookId).lean();
 
-    if (error || !book) {
-      console.error('❌ Error fetching book:', error?.message);
+    if (!rawBook) {
+      console.error('❌ Error fetching book: not found');
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
+
+    const book = {
+      ...rawBook,
+      id: rawBook._id.toString(),
+      created_at: rawBook.created_at?.toISOString() || new Date().toISOString()
+    };
 
     console.log(`📖 Book found: ${book.title}, status: ${book.status}, has pdf_data: ${!!book.pdf_data}, pdf_data length: ${book.pdf_data?.length || 0}`);
 
@@ -722,38 +712,32 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'User ID required' }, { status: 400 });
   }
 
-  console.log(`📚 Fetching books for user: ${userId}`);
+  try {
+    await connectToDatabase();
+    const rawBooks = await GeneratedBook.find({
+      user_id: userId,
+      status: 'completed',
+      pdf_data: { $ne: null }
+    })
+    .sort({ created_at: -1 })
+    .lean();
 
-  const { data: books, error } = await supabase
-    .from('generated_books')
-    .select('id, title, category, chapter_count, page_count, status, created_at, pdf_data')
-    .eq('user_id', userId)
-    .eq('status', 'completed')
-    .not('pdf_data', 'is', null)
-    .order('created_at', { ascending: false });
+    const books = rawBooks.map(b => ({
+      id: b._id.toString(),
+      title: b.title,
+      category: b.category,
+      chapter_count: b.chapter_count,
+      page_count: b.page_count,
+      status: b.status,
+      created_at: b.created_at?.toISOString() || new Date().toISOString()
+    }));
 
-  if (error) {
+    console.log(`✅ Found ${books.length} books with PDF for user`);
+    return NextResponse.json({ books });
+  } catch (error: any) {
     console.error('❌ Database error fetching books:', error.message);
-    console.error('   Code:', error.code);
-    console.error('   Details:', error.details);
-    console.error('   Hint:', error.hint);
-    // Return empty array instead of error to not break UI
     return NextResponse.json({ books: [], error: error.message });
   }
-
-  // Remove pdf_data from response (just check if it exists)
-  const booksWithoutPdfData = (books || []).map(book => ({
-    id: book.id,
-    title: book.title,
-    category: book.category,
-    chapter_count: book.chapter_count,
-    page_count: book.page_count,
-    status: book.status,
-    created_at: book.created_at,
-  }));
-
-  console.log(`✅ Found ${booksWithoutPdfData.length} books with PDF for user`);
-  return NextResponse.json({ books: booksWithoutPdfData });
 }
 
 // DELETE endpoint to delete a book
@@ -767,16 +751,13 @@ export async function DELETE(request: NextRequest) {
 
   console.log(`🗑️ Deleting book: ${bookId}`);
 
-  const { error } = await supabase
-    .from('generated_books')
-    .delete()
-    .eq('id', bookId);
-
-  if (error) {
+  try {
+    await connectToDatabase();
+    await GeneratedBook.findByIdAndDelete(bookId);
+    console.log(`✅ Book deleted: ${bookId}`);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
     console.error('❌ Error deleting book:', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  console.log(`✅ Book deleted: ${bookId}`);
-  return NextResponse.json({ success: true });
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUpsideDown } from '@/context/UpsideDownContext';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/db';
 
 interface GeneratedBook {
   id: string;
@@ -112,63 +112,22 @@ export default function UpsideDownPage() {
     const getUser = async () => {
       try {
         console.log('🔍 Checking auth state...');
-        
-        // First try getSession (recommended approach)
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        console.log('🔍 getSession result:', {
-          hasSession: !!session,
-          userId: session?.user?.id || 'none',
-          email: session?.user?.email || 'none',
-          error: sessionError?.message || 'none'
-        });
-        
-        if (session?.user) {
-          setUserId(session.user.id);
-          console.log('✅ User ID set from session:', session.user.id);
-          fetchMyBooks(session.user.id);
-          return;
-        }
-        
-        // Fallback: try getUser
-        const { data: { user }, error } = await supabase.auth.getUser();
-        console.log('🔍 getUser result:', {
-          hasUser: !!user,
-          userId: user?.id || 'none',
-          email: user?.email || 'none', 
-          error: error?.message || 'none'
-        });
-        
+        const user = await db.getCurrentUser();
         if (user) {
           setUserId(user.id);
-          console.log('✅ User ID set from getUser:', user.id);
+          console.log('✅ User ID set:', user.id);
           fetchMyBooks(user.id);
           return;
         }
-        
         console.log('❌ No user logged in - books will not be saved');
-        console.log('💡 Please login first at /auth/login');
       } catch (err) {
         console.error('Auth error:', err);
       }
     };
     
-    // Small delay to ensure auth is initialized
     setTimeout(getUser, 300);
-    
-    // Also listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.id || 'no user');
-      if (session?.user) {
-        setUserId(session.user.id);
-        fetchMyBooks(session.user.id);
-      } else {
-        setUserId(null);
-      }
-    });
 
     return () => {
-      // Unsubscribe from auth changes
-      subscription.unsubscribe();
       // Stop sounds on unmount
       if (thunderAudioRef.current) {
         thunderAudioRef.current.pause();

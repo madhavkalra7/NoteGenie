@@ -1,11 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
-import { User } from '@supabase/supabase-js'
-import { supabase, db, DbSummary, DbFlashcard, DbConcept, DbQuestion, DbStudyTask } from '@/lib/supabase'
+import { db, DbSummary, DbFlashcard, DbConcept, DbQuestion, DbStudyTask, DbUser } from '@/lib/db'
 
 interface AppState {
-  user: User | null
+  user: DbUser | null
   summaries: DbSummary[]
   flashcards: DbFlashcard[]
   concepts: DbConcept[]
@@ -64,12 +63,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(initialState)
   const [isReady, setIsReady] = useState(false)
 
-  // Load user data from Supabase
+  // Load user data from MongoDB
   const loadUserData = useCallback(async (userId: string) => {
     try {
       console.log('🔄 Loading data for user:', userId)
       
-      const [summariesRes, flashcardsRes, conceptsRes, questionsRes, studyPlanRes, statsRes, historyRes, profileRes] = await Promise.all([
+      const [summariesRes, flashcardsRes, conceptsRes, questionsRes, studyPlanRes, statsRes, historyRes] = await Promise.all([
         db.getSummaries(userId),
         db.getFlashcards(userId),
         db.getConcepts(userId),
@@ -77,20 +76,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.getStudyPlan(userId),
         db.getStats(userId),
         db.getHistoryByDate(userId),
-        supabase.from('profiles').select('name').eq('id', userId).single(),
       ])
 
       // Log any errors
-      if (summariesRes.error) console.error('❌ Error loading summaries:', summariesRes.error.message)
-      if (flashcardsRes.error) console.error('❌ Error loading flashcards:', flashcardsRes.error.message)
-      if (conceptsRes.error) console.error('❌ Error loading concepts:', conceptsRes.error.message)
-      if (profileRes.error) console.error('❌ Error loading profile:', profileRes.error.message)
+      if (summariesRes.error) console.error('❌ Error loading summaries:', summariesRes.error)
+      if (flashcardsRes.error) console.error('❌ Error loading flashcards:', flashcardsRes.error)
+      if (conceptsRes.error) console.error('❌ Error loading concepts:', conceptsRes.error)
 
-      console.log('✅ Data loaded - Summaries:', summariesRes.data?.length || 0, 'Flashcards:', flashcardsRes.data?.length || 0, 'Profile:', profileRes.data?.name || 'No name')
+      console.log('✅ Data loaded - Summaries:', summariesRes.data?.length || 0, 'Flashcards:', flashcardsRes.data?.length || 0)
 
       setState(prev => ({
         ...prev,
-        user: prev.user ? { ...prev.user, user_metadata: { ...prev.user.user_metadata, name: profileRes.data?.name || prev.user.email } } : prev.user,
         summaries: summariesRes.data || [],
         flashcards: flashcardsRes.data || [],
         concepts: conceptsRes.data || [],
@@ -108,19 +104,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Initialize auth state - simple version
+  // Initialize auth state
   useEffect(() => {
     let mounted = true
     
     const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const user = await db.getCurrentUser()
         
         if (!mounted) return
         
-        if (session?.user) {
-          setState(prev => ({ ...prev, user: session.user }))
-          await loadUserData(session.user.id)
+        if (user) {
+          setState(prev => ({ ...prev, user }))
+          await loadUserData(user.id)
         }
       } catch (error) {
         console.error('Auth error:', error)
@@ -131,34 +127,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     init()
 
-    // Listen to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        setState(prev => ({ ...prev, user: session.user }))
-        await loadUserData(session.user.id)
-      } else if (event === 'SIGNED_OUT') {
-        setState(initialState)
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        setState(prev => ({ ...prev, user: session.user }))
-      }
-    })
-
     return () => {
       mounted = false
-      subscription.unsubscribe()
     }
   }, [loadUserData])
 
   // Auth functions
   const signIn = async (email: string, password: string) => {
-    const { error } = await db.signInWithEmail(email, password)
+    const { data, error } = await db.signInWithEmail(email, password)
+    if (data) {
+      setState(prev => ({ ...prev, user: data }))
+      await loadUserData(data.id)
+    }
     return { error }
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await db.signUpWithEmail(email, password, name)
+    const { data, error } = await db.signUpWithEmail(email, password, name)
+    if (data) {
+      setState(prev => ({ ...prev, user: data }))
+      await loadUserData(data.id)
+    }
     return { error }
   }
 
@@ -169,13 +158,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     console.log('🟡 AppContext signOut called')
     try {
-      console.log('🟡 Calling db.signOut()')
-      const result = await db.signOut()
-      if (result && 'error' in result && result.error) {
-        console.error('❌ DB Logout error:', result.error)
-      } else {
-        console.log('✅ DB signOut successful')
-      }
+      await db.signOut()
     } catch (err) {
       console.error('❌ Logout exception:', err)
     } finally {
@@ -191,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return null
     }
 
-    console.log('📝 Adding summary to Supabase...', { title: summary.title, userId: state.user.id })
+    console.log('📝 Adding summary to MongoDB...', { title: summary.title, userId: state.user.id })
 
     const { data, error } = await db.addSummary({
       ...summary,
@@ -199,8 +182,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
 
     if (error) {
-      console.error('❌ Supabase Error adding summary:', error.message, error.details, error.hint)
-      alert('Failed to save summary: ' + error.message)
+      console.error('❌ Error adding summary:', error)
+      alert('Failed to save summary: ' + error)
       return null
     }
 
@@ -237,7 +220,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    console.log('📝 Adding', flashcards.length, 'flashcards to Supabase...')
+    console.log('📝 Adding', flashcards.length, 'flashcards to MongoDB...')
 
     const flashcardsWithUser = flashcards.map(f => ({
       ...f,
@@ -248,7 +231,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data, error } = await db.addFlashcards(flashcardsWithUser as any)
 
     if (error) {
-      console.error('❌ Error adding flashcards:', error.message)
+      console.error('❌ Error adding flashcards:', error)
       return
     }
 

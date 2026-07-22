@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase, db } from '@/lib/supabase'
+import { useState } from 'react'
+import { db } from '@/lib/db'
 import { useApp } from '@/context/AppContext'
 
 export default function DebugPage() {
@@ -14,41 +14,31 @@ export default function DebugPage() {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`])
   }
 
-  const testSupabase = async () => {
+  const testMongoDB = async () => {
     setTesting(true)
     setLogs([])
 
     try {
       // Test 1: Check session
-      log('Testing Supabase connection...')
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      log('Testing MongoDB connection & session...')
+      const user = await db.getCurrentUser()
       
-      if (sessionError) {
-        log(`❌ Session error: ${sessionError.message}`)
+      if (!user) {
+        log('❌ No user logged in! Please login first at /auth/login.')
         return
       }
 
-      if (!session?.user) {
-        log('❌ No user logged in! Please login first.')
-        return
-      }
-
-      log(`✅ User logged in: ${session.user.email}`)
-      log(`   User ID: ${session.user.id}`)
+      log(`✅ User logged in: ${user.email}`)
+      log(`   User ID: ${user.id}`)
 
       // Test 2: Try to fetch summaries
-      log('Fetching existing summaries...')
-      const { data: summaries, error: fetchError } = await supabase
-        .from('summaries')
-        .select('*')
-        .eq('user_id', session.user.id)
+      log('Fetching existing summaries from MongoDB...')
+      const { data: summaries, error: fetchError } = await db.getSummaries(user.id)
 
       if (fetchError) {
-        log(`❌ Fetch error: ${fetchError.message}`)
-        log(`   Code: ${fetchError.code}`)
-        log(`   Details: ${JSON.stringify(fetchError.details)}`)
+        log(`❌ Fetch error: ${fetchError}`)
       } else {
-        log(`✅ Found ${summaries?.length || 0} summaries in database`)
+        log(`✅ Found ${summaries?.length || 0} summaries in MongoDB`)
         if (summaries && summaries.length > 0) {
           log(`   Latest: "${summaries[0].title}"`)
         }
@@ -57,31 +47,24 @@ export default function DebugPage() {
       // Test 3: Try to insert a test summary
       log('Testing insert...')
       const testData = {
-        user_id: session.user.id,
+        user_id: user.id,
         title: 'Debug Test ' + Date.now(),
-        raw_text: 'This is a test note',
+        raw_text: 'This is a test note for MongoDB',
         one_liner: 'Test summary',
-        short_summary: 'This is a test summary for debugging',
+        short_summary: 'This is a test summary for debugging MongoDB migration',
         detailed_bullets: ['Point 1', 'Point 2'],
       }
 
-      const { data: inserted, error: insertError } = await supabase
-        .from('summaries')
-        .insert(testData)
-        .select()
-        .single()
+      const { data: inserted, error: insertError } = await db.addSummary(testData)
 
-      if (insertError) {
-        log(`❌ Insert error: ${insertError.message}`)
-        log(`   Code: ${insertError.code}`)
-        log(`   Hint: ${insertError.hint}`)
-        log(`   Details: ${JSON.stringify(insertError.details)}`)
+      if (insertError || !inserted) {
+        log(`❌ Insert error: ${insertError}`)
       } else {
         log(`✅ Insert successful! ID: ${inserted.id}`)
         
         // Clean up - delete test entry
-        await supabase.from('summaries').delete().eq('id', inserted.id)
-        log('✅ Cleaned up test entry')
+        await db.deleteSummary(inserted.id)
+        log('✅ Cleaned up test entry from MongoDB')
       }
 
       // Test 4: Check context state
@@ -128,11 +111,11 @@ export default function DebugPage() {
 
   return (
     <div style={{ padding: '40px', fontFamily: 'monospace', maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '20px' }}>🔧 NoteGenie Debug Page</h1>
+      <h1 style={{ marginBottom: '20px' }}>🔧 NoteGenie Debug Page (MongoDB)</h1>
       
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
         <button 
-          onClick={testSupabase}
+          onClick={testMongoDB}
           disabled={testing}
           style={{ 
             padding: '10px 20px', 
@@ -144,7 +127,7 @@ export default function DebugPage() {
             borderRadius: '5px'
           }}
         >
-          {testing ? 'Testing...' : 'Test Supabase'}
+          {testing ? 'Testing...' : 'Test MongoDB'}
         </button>
 
         <button 
@@ -175,7 +158,7 @@ export default function DebugPage() {
         lineHeight: '1.6'
       }}>
         {logs.length === 0 ? (
-          <span style={{ color: '#666' }}>Click "Test Supabase" to start debugging...</span>
+          <span style={{ color: '#666' }}>Click "Test MongoDB" to start debugging...</span>
         ) : (
           logs.map((log, i) => (
             <div key={i} style={{ 

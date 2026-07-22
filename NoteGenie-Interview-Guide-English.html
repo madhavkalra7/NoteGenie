@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NoteGenie — Interview Guide (English)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #e2e8f0;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: 
+        radial-gradient(ellipse at 20% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
+      z-index: -1;
+      animation: bgPulse 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgPulse {
+      0% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 60px 0 40px;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 18px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #34d399;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #34d399, #fbbf24, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .hero .subtitle {
+      font-size: 20px;
+      color: #94a3b8;
+      font-weight: 400;
+    }
+
+    .hero .lang-tag {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 4px 14px;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #60a5fa;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.3), transparent);
+      margin: 40px 0;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .section-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .section-header h2 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #f1f5f9;
+    }
+
+    .section-header .section-sub {
+      font-size: 14px;
+      color: #64748b;
+      font-weight: 400;
+    }
+
+    .script-section { margin-bottom: 48px; }
+
+    .script-card {
+      position: relative;
+      background: linear-gradient(135deg, rgba(6, 78, 59, 0.3), rgba(20, 20, 40, 0.8));
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .script-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, #34d399, #fbbf24);
+      border-radius: 4px 0 0 4px;
+    }
+
+    .script-card:hover {
+      border-color: rgba(16, 185, 129, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+    }
+
+    .script-card .card-number {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .script-card .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #34d399;
+      margin-bottom: 10px;
+    }
+
+    .script-card p {
+      font-size: 16px;
+      color: #cbd5e1;
+      line-height: 1.8;
+    }
+
+    .script-card .highlight {
+      color: #6ee7b7;
+      font-weight: 600;
+    }
+
+    .time-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      border-radius: 8px;
+      font-size: 12px;
+      color: #4ade80;
+      margin-bottom: 20px;
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .overview-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 14px;
+      padding: 22px 24px;
+      transition: all 0.3s ease;
+    }
+
+    .overview-card:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .overview-card .ov-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+
+    .overview-card .ov-value {
+      font-size: 17px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .tech-category { margin-bottom: 28px; }
+
+    .tech-category-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .tech-chip {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 12px;
+      padding: 16px 18px;
+      transition: all 0.25s ease;
+    }
+
+    .tech-chip:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      transform: translateX(4px);
+    }
+
+    .tech-chip .tech-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 7px;
+      flex-shrink: 0;
+    }
+
+    .tech-chip .tech-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+
+    .tech-chip .tech-desc {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .cat-frontend .tech-category-title { background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+    .cat-frontend .tech-dot { background: #60a5fa; }
+    .cat-backend .tech-category-title { background: rgba(34, 197, 94, 0.1); color: #4ade80; }
+    .cat-backend .tech-dot { background: #4ade80; }
+    .cat-ai .tech-category-title { background: rgba(168, 85, 247, 0.1); color: #c084fc; }
+    .cat-ai .tech-dot { background: #c084fc; }
+    .cat-database .tech-category-title { background: rgba(251, 146, 60, 0.1); color: #fb923c; }
+    .cat-database .tech-dot { background: #fb923c; }
+    .cat-tools .tech-category-title { background: rgba(236, 72, 153, 0.1); color: #f472b6; }
+    .cat-tools .tech-dot { background: #f472b6; }
+
+    .arch-flow {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 48px;
+    }
+
+    .arch-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+
+    .arch-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 40px;
+      flex-shrink: 0;
+    }
+
+    .arch-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 3px solid;
+      background: #0a0a0f;
+      flex-shrink: 0;
+    }
+
+    .arch-line {
+      width: 2px;
+      height: 32px;
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    .arch-content {
+      flex: 1;
+      padding-bottom: 16px;
+    }
+
+    .arch-content .arch-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .arch-content .arch-desc {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 3px;
+    }
+
+    .agent-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(245, 158, 11, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 14px;
+      padding: 24px;
+      margin: 16px 0 16px 56px;
+    }
+
+    .agent-box .agent-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #6ee7b7;
+      margin-bottom: 12px;
+    }
+
+    .agent-tool {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #94a3b8;
+      margin: 4px 4px 4px 0;
+    }
+
+    .auth-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .auth-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .auth-card:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      transform: translateY(-3px);
+    }
+
+    .auth-card .auth-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .auth-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 12px;
+    }
+
+    .auth-card ul {
+      list-style: none;
+      text-align: left;
+    }
+
+    .auth-card ul li {
+      font-size: 13px;
+      color: #94a3b8;
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auth-card ul li::before {
+      content: '✓';
+      color: #4ade80;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+
+    .agent-card {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .agent-card:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08);
+    }
+
+    .agent-card .ac-icon { font-size: 28px; margin-bottom: 8px; }
+    .agent-card .ac-title { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+    .agent-card .ac-desc { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .agent-card .ac-model {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 2px 8px;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: 6px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #c084fc;
+    }
+
+    .schema-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+      margin-bottom: 48px;
+    }
+
+    .schema-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid rgba(51, 65, 85, 0.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .schema-item code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .schema-item span {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid rgba(51, 65, 85, 0.3);
+      border-radius: 12px;
+      padding: 18px 20px;
+      transition: all 0.25s ease;
+    }
+
+    .feature-item:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .feature-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(245, 158, 11, 0.2));
+      color: #6ee7b7;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .feature-text .ft-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .feature-text .ft-desc {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 3px;
+    }
+
+    .qa-list { margin-bottom: 48px; }
+
+    .qa-item {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 14px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .qa-item:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .qa-question {
+      padding: 20px 24px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #e2e8f0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
+    }
+
+    .qa-question .q-badge {
+      padding: 3px 10px;
+      background: rgba(16, 185, 129, 0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #34d399;
+      flex-shrink: 0;
+    }
+
+    .qa-answer {
+      padding: 0 24px 20px;
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.8;
+      border-top: 1px solid rgba(51, 65, 85, 0.3);
+      padding-top: 16px;
+      margin: 0 16px;
+    }
+
+    .pitch-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(245, 158, 11, 0.1), rgba(99, 102, 241, 0.1));
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 18px;
+      padding: 36px 40px;
+      text-align: center;
+      margin-bottom: 48px;
+      position: relative;
+    }
+
+    .pitch-box::before {
+      content: '💡';
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 32px;
+      background: #0a0a0f;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .pitch-box .pitch-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #34d399;
+      margin-bottom: 14px;
+    }
+
+    .pitch-box p {
+      font-size: 18px;
+      font-weight: 500;
+      color: #e2e8f0;
+      line-height: 1.7;
+      font-style: italic;
+    }
+
+    .structure-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 48px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.9;
+      color: #94a3b8;
+    }
+
+    .structure-box .dir { color: #34d399; font-weight: 600; }
+    .structure-box .file { color: #e2e8f0; }
+    .structure-box .comment { color: #4b5563; }
+    .structure-box .tree { color: #334155; }
+
+    .footer {
+      text-align: center;
+      padding: 40px 0;
+      border-top: 1px solid rgba(51, 65, 85, 0.3);
+    }
+
+    .footer p {
+      font-size: 16px;
+      color: #64748b;
+    }
+
+    .footer .emoji { font-size: 24px; margin-bottom: 8px; display: block; }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 32px; }
+      .overview-grid, .auth-grid, .features-grid { grid-template-columns: 1fr; }
+      .tech-grid { grid-template-columns: 1fr; }
+      .agents-grid { grid-template-columns: repeat(2, 1fr); }
+      .agent-box { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ===== HERO ===== -->
+  <div class="hero">
+    <div class="hero-badge">🎤 Interview Preparation Guide</div>
+    <h1>NoteGenie — AI Study Companion</h1>
+    <p class="subtitle">Explain your project in 2 minutes during campus placement interviews</p>
+    <div class="lang-tag">🌐 Pure English Script</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== 2-MIN SCRIPT ===== -->
+  <div class="script-section">
+    <div class="section-header">
+      <div class="section-icon" style="background: rgba(16,185,129,0.1);">🗣️</div>
+      <div>
+        <h2>2-Minute Speaking Script</h2>
+        <div class="section-sub">Use this script directly in your interview</div>
+      </div>
+    </div>
+
+    <div class="time-badge">⏱️ Total Time: ~2 minutes</div>
+
+    <div class="script-card">
+      <div class="card-number">1</div>
+      <div class="card-label">📌 Introduction — 15 sec</div>
+      <p>"My project is <span class="highlight">NoteGenie — a Multi-Agent AI Study Companion</span>. The idea is simple — students upload their notes as <span class="highlight">PDFs, audio recordings, or YouTube video links</span> — and NoteGenie automatically summarizes them, generates flashcards, creates quizzes, and builds personalized study plans — all through a pipeline of specialized AI agents."</p>
+    </div>
+
+    <div class="script-card">
+      <div class="card-number">2</div>
+      <div class="card-label">⚙️ Tech Stack — 20 sec</div>
+      <p>"I built this project on <span class="highlight">Next.js 14</span> with <span class="highlight">React 18, TypeScript, and Supabase</span> as the backend. For AI, I implemented a <span class="highlight">dual AI provider architecture</span> — <span class="highlight">OpenAI GPT-5-mini</span> for complex tasks like summarization and question generation, and <span class="highlight">Groq (LLaMA 3.3 70B + Whisper)</span> for free audio transcription and text generation. I also integrated <span class="highlight">Google Gemini Vision API</span> for handwriting OCR."</p>
+    </div>
+
+    <div class="script-card">
+      <div class="card-number">3</div>
+      <div class="card-label">🤖 Multi-Agent Architecture — 25 sec</div>
+      <p>"The main highlight is my <span class="highlight">multi-agent system — 14 specialized AI agents</span>. For example, the <span class="highlight">Summarizer Agent</span> creates structured summaries, the <span class="highlight">Concept Extractor</span> pulls out key terms and definitions, the <span class="highlight">Flashcard Agent</span> generates Q&A cards, the <span class="highlight">Question Maker</span> creates MCQ, short answer, and true/false questions, and the <span class="highlight">Doubt Resolver</span> works like a chatbot that solves doubts with analogies and step-by-step explanations. These agents are chained in a pipeline — one agent's output becomes the next agent's input."</p>
+    </div>
+
+    <div class="script-card">
+      <div class="card-number">4</div>
+      <div class="card-label">🎨 Key Features — 20 sec</div>
+      <p>"The project includes <span class="highlight">YouTube video to notes</span> — just paste a link, transcript is extracted and notes are generated. <span class="highlight">Audio transcription</span> via Groq Whisper API — voice recordings converted to clean notes. An <span class="highlight">Interactive Concept Graph</span> — a force-directed mind map built on the Canvas API. A <span class="highlight">Spaced Repetition</span> algorithm for smart flashcard review scheduling. And <span class="highlight">Google Calendar integration</span> to sync study plans."</p>
+    </div>
+
+    <div class="script-card">
+      <div class="card-number">5</div>
+      <div class="card-label">🔐 Auth & Database — 20 sec</div>
+      <p>"Authentication is handled through <span class="highlight">Supabase Auth</span> — supporting <span class="highlight">Email/Password and Google OAuth</span>. The database uses <span class="highlight">PostgreSQL with Row Level Security (RLS)</span> — each user can only access their own data. There are <span class="highlight">8 database tables</span> — profiles, summaries, flashcards, concepts, questions, study_tasks, user_stats, and generated_books. On the backend, <span class="highlight">database triggers</span> automatically create profile and stats records on signup."</p>
+    </div>
+
+    <div class="script-card">
+      <div class="card-number">6</div>
+      <div class="card-label">🏆 Challenges & Fun — 20 sec</div>
+      <p>"Key challenges I solved include <span class="highlight">multi-provider AI orchestration</span> (seamlessly switching between OpenAI, Groq, and Gemini), <span class="highlight">agent pipeline management</span> (coordinating 14 agents), and <span class="highlight">Canvas-based graph rendering</span> with force-directed layout using physics simulation. Plus there's a fun easter egg — <span class="highlight">Upside Down Mode</span> inspired by Stranger Things, where the entire UI flips with a thunder sound effect! 🎃"</p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== QUICK OVERVIEW ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(59,130,246,0.1);">📋</div>
+    <div>
+      <h2>Project Overview</h2>
+      <div class="section-sub">Quick reference card</div>
+    </div>
+  </div>
+
+  <div class="overview-grid">
+    <div class="overview-card">
+      <div class="ov-label">Project Name</div>
+      <div class="ov-value">NoteGenie — Multi-Agent AI Study Companion</div>
+    </div>
+    <div class="overview-card">
+      <div class="ov-label">Project Type</div>
+      <div class="ov-value">Full-Stack AI-Powered EdTech Application</div>
+    </div>
+    <div class="overview-card">
+      <div class="ov-label">What It Does</div>
+      <div class="ov-value">Notes/Audio/Video → AI agents → Summaries, Flashcards, Quiz, Study Plan</div>
+    </div>
+    <div class="overview-card">
+      <div class="ov-label">AI Agents</div>
+      <div class="ov-value">14 specialized agents with multi-provider AI (OpenAI + Groq + Gemini)</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== TECH STACK ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(34,197,94,0.1);">🏗️</div>
+    <div>
+      <h2>Tech Stack</h2>
+      <div class="section-sub">Complete technology breakdown</div>
+    </div>
+  </div>
+
+  <div class="tech-category cat-frontend">
+    <div class="tech-category-title">⚡ Frontend</div>
+    <div class="tech-grid">
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Next.js 14 (App Router)</div><div class="tech-desc">SSR, file-based routing, API routes</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">React 18</div><div class="tech-desc">Client components, hooks, context API</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">TypeScript</div><div class="tech-desc">Type-safe interfaces for all 14 agents</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Custom CSS (Doodle Theme)</div><div class="tech-desc">Hand-drawn sketch-style UI design</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Canvas API</div><div class="tech-desc">Force-directed interactive concept graphs</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">CSS Animations</div><div class="tech-desc">Upside Down mode, floating doodles, transitions</div></div></div>
+    </div>
+  </div>
+
+  <div class="tech-category cat-backend">
+    <div class="tech-category-title">🖥️ Backend</div>
+    <div class="tech-grid">
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Next.js API Routes</div><div class="tech-desc">15 serverless API endpoints</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Supabase</div><div class="tech-desc">Auth + PostgreSQL + RLS + Realtime</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">PostgreSQL</div><div class="tech-desc">8 tables with indexes & triggers</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Row Level Security</div><div class="tech-desc">Per-user data isolation policies</div></div></div>
+    </div>
+  </div>
+
+  <div class="tech-category cat-ai">
+    <div class="tech-category-title">🧠 AI & ML</div>
+    <div class="tech-grid">
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">OpenAI GPT-5-mini</div><div class="tech-desc">Summarization, questions, concept extraction</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Groq (LLaMA 3.3 70B)</div><div class="tech-desc">Free & fast text generation</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Groq Whisper Large V3</div><div class="tech-desc">Free audio transcription</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Google Gemini 1.5 Flash</div><div class="tech-desc">Vision API for handwriting OCR & highlights</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">youtubei.js</div><div class="tech-desc">YouTube transcript extraction</div></div></div>
+    </div>
+  </div>
+
+  <div class="tech-category cat-database">
+    <div class="tech-category-title">🗄️ Database & Auth</div>
+    <div class="tech-grid">
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Supabase Auth</div><div class="tech-desc">Email/Password + Google OAuth</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Supabase SSR</div><div class="tech-desc">Server-side auth cookie handling</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Database Triggers</div><div class="tech-desc">Auto-create profile + stats on signup</div></div></div>
+    </div>
+  </div>
+
+  <div class="tech-category cat-tools" style="margin-bottom: 48px;">
+    <div class="tech-category-title">🛠️ Libraries & Tools</div>
+    <div class="tech-grid">
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">pdf-lib + unpdf</div><div class="tech-desc">PDF text extraction</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Google Calendar API</div><div class="tech-desc">Study plan calendar sync</div></div></div>
+      <div class="tech-chip"><div class="tech-dot"></div><div><div class="tech-name">Spaced Repetition Algorithm</div><div class="tech-desc">Memory retention optimization</div></div></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== 14 AI AGENTS ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(168,85,247,0.1);">🤖</div>
+    <div>
+      <h2>14 AI Agents</h2>
+      <div class="section-sub">Multi-agent pipeline architecture</div>
+    </div>
+  </div>
+
+  <div class="agents-grid">
+    <div class="agent-card">
+      <div class="ac-icon">📝</div>
+      <div class="ac-title">Summarizer Agent</div>
+      <div class="ac-desc">Notes → structured summary with one-liner, bullets</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">🔍</div>
+      <div class="ac-title">Concept Extractor</div>
+      <div class="ac-desc">Extracts key terms, definitions, formulas</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">⚡</div>
+      <div class="ac-title">Flashcard Agent</div>
+      <div class="ac-desc">Concepts → Q&A flashcards with difficulty tags</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">❓</div>
+      <div class="ac-title">Question Maker</div>
+      <div class="ac-desc">MCQ, short answer, true/false questions</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">✅</div>
+      <div class="ac-title">Answer Validator</div>
+      <div class="ac-desc">Scores answers 0-10 with detailed feedback</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">🤔</div>
+      <div class="ac-title">Doubt Resolver</div>
+      <div class="ac-desc">Chatbot with analogies & step-by-step</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">📅</div>
+      <div class="ac-title">Study Plan Agent</div>
+      <div class="ac-desc">Personalized daily study schedules</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">📖</div>
+      <div class="ac-title">Study Content Agent</div>
+      <div class="ac-desc">Detailed topic explanations + practice MCQs</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">🧠</div>
+      <div class="ac-title">Memory Retention</div>
+      <div class="ac-desc">Spaced repetition scheduling</div>
+      <div class="ac-model">Client-side Algorithm</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">📊</div>
+      <div class="ac-title">Difficulty Detector</div>
+      <div class="ac-desc">Tags concepts as easy/medium/hard</div>
+      <div class="ac-model">Heuristic + AI</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">🔗</div>
+      <div class="ac-title">Concept Graph Agent</div>
+      <div class="ac-desc">Mind map with relationship edges</div>
+      <div class="ac-model">OpenAI GPT-5-mini</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">🎤</div>
+      <div class="ac-title">Audio to Notes</div>
+      <div class="ac-desc">Voice recordings → clean notes + summary</div>
+      <div class="ac-model">Groq Whisper V3</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">📺</div>
+      <div class="ac-title">YouTube to Notes</div>
+      <div class="ac-desc">Video link → transcript → structured notes</div>
+      <div class="ac-model">youtubei.js + Groq</div>
+    </div>
+    <div class="agent-card">
+      <div class="ac-icon">✍️</div>
+      <div class="ac-title">Handwriting OCR</div>
+      <div class="ac-desc">Handwritten images → extracted text</div>
+      <div class="ac-model">Gemini 1.5 Flash</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== ARCHITECTURE ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(245,158,11,0.1);">🧠</div>
+    <div>
+      <h2>How It Works</h2>
+      <div class="section-sub">End-to-end architecture flow</div>
+    </div>
+  </div>
+
+  <div class="arch-flow">
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #60a5fa;"></div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">📄 User Input</div>
+        <div class="arch-desc">Upload PDF, paste text, record audio, or paste YouTube URL</div>
+      </div>
+    </div>
+
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #34d399;"></div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">🔄 Input Processing</div>
+        <div class="arch-desc">PDF extraction (unpdf) / Audio transcription (Groq Whisper) / YouTube captions (youtubei.js)</div>
+      </div>
+    </div>
+
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #fbbf24;"></div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">📝 Summarizer Agent</div>
+        <div class="arch-desc">Raw text → One-liner, Short Summary, Detailed Bullets (via OpenAI)</div>
+      </div>
+    </div>
+
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #c084fc;"></div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">🔍 Concept Extractor</div>
+        <div class="arch-desc">Summary → Key concepts with terms, definitions, categories, difficulty</div>
+      </div>
+    </div>
+
+    <div class="agent-box">
+      <div class="agent-title">⚡ Parallel Agent Pipeline</div>
+      <div>
+        <span class="agent-tool">⚡ Flashcard Agent</span>
+        <span class="agent-tool">❓ Question Maker</span>
+        <span class="agent-tool">🔗 Concept Graph</span>
+        <span class="agent-tool">📊 Difficulty Detector</span>
+      </div>
+      <div style="font-size: 12px; color: #64748b; margin-top: 10px;">Concepts → Flashcards + Quiz Questions + Mind Map simultaneously</div>
+    </div>
+
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #fb923c;"></div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">💾 Save to Supabase</div>
+        <div class="arch-desc">All data stored in PostgreSQL with user isolation (RLS)</div>
+      </div>
+    </div>
+
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #f472b6;"></div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">📅 Study Plan Generation</div>
+        <div class="arch-desc">Topics + weak areas → personalized daily schedule with Google Calendar sync</div>
+      </div>
+    </div>
+
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #22d3ee;"></div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">🧠 Spaced Repetition</div>
+        <div class="arch-desc">Memory Retention Agent schedules reviews at 1, 3, 7, 14, 30 day intervals</div>
+      </div>
+    </div>
+
+    <div class="arch-step">
+      <div class="arch-connector">
+        <div class="arch-dot" style="border-color: #4ade80;"></div>
+      </div>
+      <div class="arch-content">
+        <div class="arch-title">🎯 Interactive Dashboard</div>
+        <div class="arch-desc">Stats, history, quick actions, today's focus — full study hub</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== AUTH ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(251,146,60,0.1);">🔐</div>
+    <div>
+      <h2>Authentication System</h2>
+      <div class="section-sub">Supabase Auth with Row Level Security</div>
+    </div>
+  </div>
+
+  <div class="auth-grid">
+    <div class="auth-card">
+      <div class="auth-icon">🔑</div>
+      <h4>Email/Password Auth</h4>
+      <ul>
+        <li>Supabase Auth signup/signin</li>
+        <li>Email verification</li>
+        <li>Password reset flow</li>
+        <li>Session management</li>
+      </ul>
+    </div>
+    <div class="auth-card">
+      <div class="auth-icon">🌐</div>
+      <h4>Google OAuth</h4>
+      <ul>
+        <li>One-click Google Sign-In</li>
+        <li>OAuth callback handling</li>
+        <li>Auto profile creation</li>
+        <li>Supabase SSR helpers</li>
+      </ul>
+    </div>
+    <div class="auth-card">
+      <div class="auth-icon">🛡️</div>
+      <h4>Row Level Security</h4>
+      <ul>
+        <li>Per-user data isolation</li>
+        <li>8 tables with RLS policies</li>
+        <li>auth.uid() based checks</li>
+        <li>Route protection via isReady</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== DB SCHEMA ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(168,85,247,0.1);">📊</div>
+    <div>
+      <h2>Database Schema</h2>
+      <div class="section-sub">8 tables in PostgreSQL via Supabase</div>
+    </div>
+  </div>
+
+  <div class="schema-grid">
+    <div class="schema-item"><code>profiles</code><span>User profile (name, avatar, email)</span></div>
+    <div class="schema-item"><code>summaries</code><span>Notes with one-liner, bullets, source type</span></div>
+    <div class="schema-item"><code>flashcards</code><span>Q&A cards with review tracking</span></div>
+    <div class="schema-item"><code>concepts</code><span>Key terms with difficulty tags</span></div>
+    <div class="schema-item"><code>questions</code><span>MCQ, short, true/false questions</span></div>
+    <div class="schema-item"><code>study_tasks</code><span>Daily study plan with priorities</span></div>
+    <div class="schema-item"><code>user_stats</code><span>Notes processed, quizzes taken stats</span></div>
+    <div class="schema-item"><code>generated_books</code><span>AI-generated study books (PDF)</span></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== FEATURES ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(59,130,246,0.1);">🌟</div>
+    <div>
+      <h2>Key Features</h2>
+      <div class="section-sub">12 features to highlight in your interview</div>
+    </div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-item"><div class="feature-num">1</div><div class="feature-text"><div class="ft-title">14 Specialized AI Agents</div><div class="ft-desc">Multi-agent pipeline: Summarizer → Extractor → Flashcards → Quiz</div></div></div>
+    <div class="feature-item"><div class="feature-num">2</div><div class="feature-text"><div class="ft-title">Multi-Input Support</div><div class="ft-desc">PDF upload, text paste, audio recording, YouTube URL</div></div></div>
+    <div class="feature-item"><div class="feature-num">3</div><div class="feature-text"><div class="ft-title">Audio Transcription</div><div class="ft-desc">Groq Whisper Large V3 — free & fast voice-to-notes</div></div></div>
+    <div class="feature-item"><div class="feature-num">4</div><div class="feature-text"><div class="ft-title">YouTube to Notes</div><div class="ft-desc">Paste video link → auto-extract captions → structured notes</div></div></div>
+    <div class="feature-item"><div class="feature-num">5</div><div class="feature-text"><div class="ft-title">Handwriting OCR</div><div class="ft-desc">Google Gemini Vision — photo of handwritten notes → digital text</div></div></div>
+    <div class="feature-item"><div class="feature-num">6</div><div class="feature-text"><div class="ft-title">Interactive Concept Graph</div><div class="ft-desc">Canvas-based force-directed mind map with drag & zoom</div></div></div>
+    <div class="feature-item"><div class="feature-num">7</div><div class="feature-text"><div class="ft-title">Smart Quiz System</div><div class="ft-desc">MCQ + Short Answer + True/False with AI answer validation</div></div></div>
+    <div class="feature-item"><div class="feature-num">8</div><div class="feature-text"><div class="ft-title">Spaced Repetition</div><div class="ft-desc">1-3-7-14-30 day review intervals for optimal retention</div></div></div>
+    <div class="feature-item"><div class="feature-num">9</div><div class="feature-text"><div class="ft-title">AI Doubt Resolver</div><div class="ft-desc">Chatbot with analogies, step-by-step, simple/detailed modes</div></div></div>
+    <div class="feature-item"><div class="feature-num">10</div><div class="feature-text"><div class="ft-title">Personalized Study Plan</div><div class="ft-desc">AI-generated daily schedule + Google Calendar integration</div></div></div>
+    <div class="feature-item"><div class="feature-num">11</div><div class="feature-text"><div class="ft-title">AI Book Generator</div><div class="ft-desc">Generate entire study books with chapters as downloadable PDFs</div></div></div>
+    <div class="feature-item"><div class="feature-num">12</div><div class="feature-text"><div class="ft-title">Upside Down Mode 🎃</div><div class="ft-desc">Stranger Things easter egg — UI flips with thunder sound!</div></div></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== Q&A ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(244,114,182,0.1);">❓</div>
+    <div>
+      <h2>Interview Questions & Answers</h2>
+      <div class="section-sub">10 most common questions interviewers will ask</div>
+    </div>
+  </div>
+
+  <div class="qa-list">
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q1</span>What is NoteGenie and what problem does it solve?</div>
+      <div class="qa-answer">NoteGenie is an AI-powered study companion that automatically generates learning materials from student notes. The problem it solves is that after taking notes, students have to manually create flashcards, search for quizzes, and build study plans — all of which is extremely time-consuming. NoteGenie automates all of this through 14 specialized AI agents — just upload your notes, and within seconds you get summaries, flashcards, quizzes, concept maps, and personalized study plans.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q2</span>Why multi-agent architecture instead of a single AI call?</div>
+      <div class="qa-answer">Doing everything in a single AI call is unreliable — output consistency degrades and you hit token limits quickly. With a multi-agent approach, each agent handles one specialized task with its own optimized prompt. The Summarizer Agent only creates summaries, the Concept Extractor only pulls out key terms, then the Flashcard Agent converts those concepts into cards. This follows the separation of concerns design pattern — each agent is small, testable, and replaceable. Plus agents can be chained: one agent's output becomes the next agent's input.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q3</span>Why did you use 3 different AI providers?</div>
+      <div class="qa-answer">Cost optimization and best-fit matching. OpenAI GPT-5-mini is the most accurate for text tasks like summarization and question generation. Groq's LLaMA 3.3 70B model is free and fast — perfect for audio note summaries. Groq's Whisper Large V3 is the best-in-class free audio transcription service. Google Gemini Vision API excels at image understanding — handwritten note OCR and highlighted text detection. Each provider excels at its specific task, so using all three gives the best results at the lowest cost.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q4</span>How does YouTube to Notes work internally?</div>
+      <div class="qa-answer">I used the youtubei.js library which accesses YouTube's internal API (Innertube). The user pastes a URL, I extract the video ID using regex pattern matching, then create a YouTube client via Innertube.create(), fetch video info with getInfo(), and extract captions via getTranscript(). The caption segments are combined into a full transcript, which is then sent to Groq's LLaMA model to generate structured notes — including title, one-liner summary, detailed bullet points, key timestamps, and main topics.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q5</span>How does the spaced repetition algorithm work?</div>
+      <div class="qa-answer">I implemented standard spaced repetition intervals — 1, 3, 7, 14, and 30 days. The Memory Retention Agent checks each flashcard's timesReviewed and lastReviewed fields. If a card has been reviewed 0 times and 1 day has passed — it's due for review. If reviewed once and 3 days have passed — due again. This is scientifically proven to improve long-term memory retention through increasing review intervals. Cards are sorted by priority — least reviewed first, then by last review date.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q6</span>Explain how Row Level Security (RLS) works in your project.</div>
+      <div class="qa-answer">Every table in Supabase has RLS enabled. I defined policies like "Users can view own summaries" which checks that auth.uid() (the logged-in user's ID) matches the user_id column. This means if User A is logged in, they can only access their own summaries, flashcards, and concepts — even with direct SQL queries. This is database-level security, not application-level, making it extremely robust. There are 24+ RLS policies across 8 tables covering SELECT, INSERT, UPDATE, and DELETE operations.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q7</span>What was the biggest technical challenge?</div>
+      <div class="qa-answer">Multi-provider AI orchestration was the most challenging. OpenAI, Groq, and Gemini all have different APIs, response formats, and error handling patterns. I built wrapper functions (callOpenAI, callGroq) that provide a unified interface. Additionally, JSON parsing was tricky — AI sometimes returns invalid JSON, so I built a robust parseJSONResponse function that handles markdown code blocks, extracts partial JSON, and provides graceful fallbacks. This ensures the app never crashes due to unexpected AI output.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q8</span>How does the interactive Concept Graph work?</div>
+      <div class="qa-answer">I implemented a force-directed graph using the Canvas API. The AI agent converts concepts into nodes and their relationships into edges. Then on each animation frame, a physics simulation runs on the Canvas — nodes repel each other (Coulomb's law), edges attract connected nodes (spring force), and center gravity keeps everything in the middle. Users can drag nodes, zoom in/out, and click for details. Each node's color is determined by its level — there are 6 gradient color schemes for visual hierarchy.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q9</span>How do you handle the Upside Down Mode?</div>
+      <div class="qa-answer">This is a Stranger Things–inspired easter egg! I created an UpsideDownContext using React's Context API. When the user toggles it, a 2.5-second flip animation plays via CSS transforms, accompanied by a thunder sound effect using the Web Audio API. The CSS applies transform: rotate(180deg) + scaleX(-1) to the entire body, colors shift to a dark red/black theme, and fonts switch to Creepster (a horror-style font). There's a dedicated upside-down.css file for the complete dark theme styling.</div>
+    </div>
+
+    <div class="qa-item">
+      <div class="qa-question"><span class="q-badge">Q10</span>What did you learn from this project?</div>
+      <div class="qa-answer">I learned multi-agent AI system architecture — designing and coordinating 14 specialized agents. Multi-provider AI integration — using OpenAI, Groq, and Gemini seamlessly in one project. Supabase with Row Level Security — implementing production-grade database-level security. Canvas API — building force-directed graph rendering from scratch with physics simulation. Audio processing pipelines — from Whisper transcription to clean structured notes. And most importantly, prompt engineering — because every agent's output quality depends directly on how well the prompt is crafted.</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== ELEVATOR PITCH ===== -->
+  <div class="pitch-box">
+    <div class="pitch-label">🎯 One-Liner Elevator Pitch</div>
+    <p>"NoteGenie is a multi-agent AI study companion that transforms notes, audio, and YouTube videos into summaries, flashcards, quizzes, and personalized study plans — powered by 14 specialized AI agents across OpenAI, Groq, and Gemini, built with Next.js 14, TypeScript, and Supabase."</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== PROJECT STRUCTURE ===== -->
+  <div class="section-header">
+    <div class="section-icon" style="background: rgba(34,197,94,0.1);">📁</div>
+    <div>
+      <h2>Project Structure</h2>
+      <div class="section-sub">Simplified folder layout</div>
+    </div>
+  </div>
+
+  <div class="structure-box">
+    <span class="dir">NoteGenie/</span><br>
+    <span class="tree">├── </span><span class="dir">agents/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 14 AI agent modules</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">summarizerAgent.ts</span> <span class="comment">&nbsp;&nbsp;# Notes → summary (OpenAI)</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">conceptExtractorAgent.ts</span> <span class="comment"># Key terms extraction</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">flashcardAgent.ts</span> <span class="comment">&nbsp;&nbsp;&nbsp;# Q&A card generation</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">questionMakerAgent.ts</span> <span class="comment">&nbsp;# MCQ/short/TF questions</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">doubtResolverAgent.ts</span> <span class="comment">&nbsp;# AI chatbot for doubts</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">audioToNotesAgent.ts</span> <span class="comment">&nbsp;&nbsp;# Voice → notes (Groq Whisper)</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">youtubeToNotesAgent.ts</span> <span class="comment">&nbsp;# YouTube → notes (youtubei.js)</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">handwritingOCRAgent.ts</span> <span class="comment">&nbsp;# Image → text (Gemini Vision)</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">memoryRetentionAgent.ts</span> <span class="comment"># Spaced repetition logic</span><br>
+    <span class="tree">│&nbsp;&nbsp; └── </span><span class="file">types.ts</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Shared agent type definitions</span><br>
+    <span class="tree">├── </span><span class="dir">app/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Next.js App Router pages</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">api/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# 15 API routes</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">auth/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Login, Signup, Callback</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">dashboard/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Stats + quick actions hub</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">flashcards/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Flashcard review + quiz</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">concept-graph/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Interactive mind map</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">doubt-solver/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# AI chatbot page</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">study-plan/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Schedule + calendar sync</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">audio-notes/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Voice recording page</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="dir">youtube-notes/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# YouTube URL input page</span><br>
+    <span class="tree">│&nbsp;&nbsp; └── </span><span class="dir">upside-down/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Stranger Things easter egg</span><br>
+    <span class="tree">├── </span><span class="dir">components/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Reusable UI components</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">InteractiveConceptGraph.tsx</span> <span class="comment"># Canvas force-directed graph</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">AnimatedFlashcard.tsx</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Flip animation card</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">AgentTimeline.tsx</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Processing step tracker</span><br>
+    <span class="tree">│&nbsp;&nbsp; └── </span><span class="dir">layout/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Navbar, Sidebar, PageLayout</span><br>
+    <span class="tree">├── </span><span class="dir">context/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# React Context providers</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">AppContext.tsx</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Auth + data + CRUD ops</span><br>
+    <span class="tree">│&nbsp;&nbsp; └── </span><span class="file">UpsideDownContext.tsx</span> <span class="comment">&nbsp;&nbsp;# Easter egg state</span><br>
+    <span class="tree">├── </span><span class="dir">lib/</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Utility modules</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">supabase.ts</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# DB client + 20+ CRUD helpers</span><br>
+    <span class="tree">│&nbsp;&nbsp; ├── </span><span class="file">openai.ts</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# OpenAI API wrapper</span><br>
+    <span class="tree">│&nbsp;&nbsp; └── </span><span class="file">groq.ts</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Groq API wrapper (FREE)</span><br>
+    <span class="tree">└── </span><span class="file">supabase-schema.sql</span> <span class="comment">&nbsp;&nbsp;&nbsp;&nbsp;# Full DB schema + RLS + triggers</span>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <div class="footer">
+    <span class="emoji">🚀</span>
+    <p>Best of luck with your placement interviews!</p>
+  </div>
+
+</div>
+
+</body>
+</html>
