@@ -164,51 +164,15 @@ export const db = {
   },
 
   signInWithGoogle() {
-    const triggerPopup = () => {
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '146654699105-kgcjs1kr7b17qp7b0kcde3ku76bco5du.apps.googleusercontent.com'
-      if (!(window as any).google?.accounts?.oauth2) {
-        alert('Google Auth SDK loading... Please click Sign in with Google again in a moment.')
-        return
-      }
+    if (typeof window === 'undefined') return
 
-      const client = (window as any).google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: 'email profile',
-        callback: async (response: any) => {
-          if (response.error) {
-            console.error('Google Auth Error:', response)
-            if (response.error === 'popup_closed_by_user') return;
-            alert('Google Login Error: ' + (response.error_description || response.error))
-            return
-          }
-          if (response.access_token) {
-            try {
-              const res = await fetch('/api/auth/google', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accessToken: response.access_token })
-              })
-              const data = await res.json()
-              if (res.ok && data.success) {
-                window.location.href = '/dashboard'
-              } else {
-                alert('Google Sign-In failed: ' + (data.error || 'Server error'))
-              }
-            } catch (err: any) {
-              alert('Google Sign-In error: ' + err.message)
-            }
-          }
-        }
-      })
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '146654699105-kgcjs1kr7b17qp7b0kcde3ku76bco5du.apps.googleusercontent.com'
+    const origin = window.location.origin
+    const redirectUri = encodeURIComponent(`${origin}/auth/google-login-callback`)
+    
+    const googleOAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=email%20profile&prompt=select_account`
 
-      client.requestAccessToken()
-    }
-
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
-      triggerPopup()
-    } else {
-      loadGoogleScript().then(() => triggerPopup())
-    }
+    window.location.href = googleOAuthUrl
   },
 
   async signOut(): Promise<{ error: any }> {
