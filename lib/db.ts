@@ -163,44 +163,52 @@ export const db = {
     }
   },
 
-  async signInWithGoogle() {
-    await loadGoogleScript()
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '146654699105-kgcjs1kr7b17qp7b0kcde3ku76bco5du.apps.googleusercontent.com'
+  signInWithGoogle() {
+    const triggerPopup = () => {
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '146654699105-kgcjs1kr7b17qp7b0kcde3ku76bco5du.apps.googleusercontent.com'
+      if (!(window as any).google?.accounts?.oauth2) {
+        alert('Google Auth SDK loading... Please click Sign in with Google again in a moment.')
+        return
+      }
 
-    if (typeof window === 'undefined' || !(window as any).google?.accounts?.oauth2) {
-      alert('Google Auth SDK could not be loaded. Please check your internet connection.')
-      return
-    }
-
-    const client = (window as any).google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: 'email profile',
-      callback: async (response: any) => {
-        if (response.error) {
-          console.error('Google Auth Error:', response)
-          return
-        }
-        if (response.access_token) {
-          try {
-            const res = await fetch('/api/auth/google', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ accessToken: response.access_token })
-            })
-            const data = await res.json()
-            if (res.ok && data.success) {
-              window.location.href = '/dashboard'
-            } else {
-              alert('Google Sign-In failed: ' + (data.error || 'Server error'))
+      const client = (window as any).google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'email profile',
+        callback: async (response: any) => {
+          if (response.error) {
+            console.error('Google Auth Error:', response)
+            if (response.error === 'popup_closed_by_user') return;
+            alert('Google Login Error: ' + (response.error_description || response.error))
+            return
+          }
+          if (response.access_token) {
+            try {
+              const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessToken: response.access_token })
+              })
+              const data = await res.json()
+              if (res.ok && data.success) {
+                window.location.href = '/dashboard'
+              } else {
+                alert('Google Sign-In failed: ' + (data.error || 'Server error'))
+              }
+            } catch (err: any) {
+              alert('Google Sign-In error: ' + err.message)
             }
-          } catch (err: any) {
-            alert('Google Sign-In error: ' + err.message)
           }
         }
-      }
-    })
+      })
 
-    client.requestAccessToken()
+      client.requestAccessToken()
+    }
+
+    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+      triggerPopup()
+    } else {
+      loadGoogleScript().then(() => triggerPopup())
+    }
   },
 
   async signOut(): Promise<{ error: any }> {

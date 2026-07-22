@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   keywords: ['study', 'AI', 'notes', 'flashcards', 'quiz', 'learning', 'education'],
 }
 
+import Script from 'next/script'
+
 export default function RootLayout({
   children,
 }: {
@@ -28,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} ${creepster.variable}`}>
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <UpsideDownProvider>
           <AppProvider>
             {/* Floating Doodle Sketches Background */}
