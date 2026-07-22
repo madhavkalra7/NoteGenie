@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import mongoose from 'mongoose'
 import connectToDatabase from '@/lib/mongodb'
 import Summary from '@/lib/models/Summary'
 import Flashcard from '@/lib/models/Flashcard'
@@ -29,8 +30,9 @@ export async function POST(request: NextRequest) {
 
       case 'addSummary': {
         const { summary } = payload
+        const { id, _id, ...cleanSummary } = summary || {}
         const newSummary = await Summary.create({
-          ...summary,
+          ...cleanSummary,
           created_at: new Date()
         })
         const obj = newSummary.toObject()
@@ -46,10 +48,12 @@ export async function POST(request: NextRequest) {
 
       case 'deleteSummary': {
         const { id } = payload
-        await Summary.findByIdAndDelete(id)
-        await Flashcard.deleteMany({ summary_id: id })
-        await Concept.deleteMany({ summary_id: id })
-        await Question.deleteMany({ summary_id: id })
+        if (id && mongoose.Types.ObjectId.isValid(id)) {
+          await Summary.findByIdAndDelete(id)
+          await Flashcard.deleteMany({ summary_id: id })
+          await Concept.deleteMany({ summary_id: id })
+          await Question.deleteMany({ summary_id: id })
+        }
         return NextResponse.json({ data: true, error: null })
       }
 
@@ -82,9 +86,11 @@ export async function POST(request: NextRequest) {
 
       case 'addFlashcards': {
         const { flashcards } = payload
-        const created = await Flashcard.insertMany(
-          flashcards.map((f: any) => ({ ...f, created_at: new Date() }))
-        )
+        const cleaned = (flashcards || []).map((f: any) => {
+          const { id, _id, ...rest } = f
+          return { ...rest, created_at: new Date() }
+        })
+        const created = await Flashcard.insertMany(cleaned)
         return NextResponse.json({
           data: created.map(f => ({
             ...f.toObject(),
@@ -97,6 +103,9 @@ export async function POST(request: NextRequest) {
 
       case 'updateFlashcard': {
         const { id, updates } = payload
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+          return NextResponse.json({ data: null, error: 'Invalid flashcard ID' })
+        }
         const updated = await Flashcard.findByIdAndUpdate(id, updates, { new: true }).lean()
         if (!updated) return NextResponse.json({ data: null, error: 'Flashcard not found' })
         return NextResponse.json({
@@ -138,9 +147,11 @@ export async function POST(request: NextRequest) {
 
       case 'addConcepts': {
         const { concepts } = payload
-        const created = await Concept.insertMany(
-          concepts.map((c: any) => ({ ...c, created_at: new Date() }))
-        )
+        const cleaned = (concepts || []).map((c: any) => {
+          const { id, _id, ...rest } = c
+          return { ...rest, created_at: new Date() }
+        })
+        const created = await Concept.insertMany(cleaned)
         return NextResponse.json({
           data: created.map(c => ({
             ...c.toObject(),
@@ -180,9 +191,11 @@ export async function POST(request: NextRequest) {
 
       case 'addQuestions': {
         const { questions } = payload
-        const created = await Question.insertMany(
-          questions.map((q: any) => ({ ...q, created_at: new Date() }))
-        )
+        const cleaned = (questions || []).map((q: any) => {
+          const { id, _id, ...rest } = q
+          return { ...rest, created_at: new Date() }
+        })
+        const created = await Question.insertMany(cleaned)
         return NextResponse.json({
           data: created.map(q => ({
             ...q.toObject(),
@@ -210,9 +223,11 @@ export async function POST(request: NextRequest) {
       case 'setStudyPlan': {
         const { userId, tasks } = payload
         await StudyTask.deleteMany({ user_id: userId })
-        const created = await StudyTask.insertMany(
-          tasks.map((t: any) => ({ ...t, created_at: new Date() }))
-        )
+        const cleaned = (tasks || []).map((t: any) => {
+          const { id, _id, ...rest } = t
+          return { ...rest, created_at: new Date() }
+        })
+        const created = await StudyTask.insertMany(cleaned)
         return NextResponse.json({
           data: created.map(t => ({
             ...t.toObject(),
@@ -225,6 +240,9 @@ export async function POST(request: NextRequest) {
 
       case 'updateStudyTask': {
         const { id, updates } = payload
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+          return NextResponse.json({ data: null, error: 'Invalid task ID' })
+        }
         const updated = await StudyTask.findByIdAndUpdate(id, updates, { new: true }).lean()
         if (!updated) return NextResponse.json({ data: null, error: 'Task not found' })
         return NextResponse.json({
@@ -281,6 +299,9 @@ export async function POST(request: NextRequest) {
       // --- SUMMARY WITH RELATIONS ---
       case 'getSummaryWithRelations': {
         const { summaryId } = payload
+        if (!summaryId || !mongoose.Types.ObjectId.isValid(summaryId)) {
+          return NextResponse.json({ summary: null, flashcards: [], concepts: [], questions: [] })
+        }
         const [summary, flashcards, concepts, questions] = await Promise.all([
           Summary.findById(summaryId).lean(),
           Flashcard.find({ summary_id: summaryId }).lean(),

@@ -14,7 +14,7 @@ import { generateQuestions } from '@/agents/questionMakerAgent'
 
 export default function FlashcardsPage() {
   const router = useRouter()
-  const { state, isReady, updateFlashcard, updateStats, addFlashcards, addQuestions, getSummaryWithData, refreshData } = useApp()
+  const { state, isReady, updateFlashcard, updateStats, addFlashcards, addQuestions, addConcepts, getSummaryWithData, refreshData } = useApp()
   const [view, setView] = useState<'select' | 'flashcards' | 'quiz' | 'score' | 'all'>('select')
   const [selectedSummaryId, setSelectedSummaryId] = useState<string | null>(null)
   const [currentFlashcards, setCurrentFlashcards] = useState<any[]>([])
@@ -151,11 +151,42 @@ export default function FlashcardsPage() {
       }
 
       // Generate new flashcards and questions from concepts
-      const concepts = data.concepts || []
+      let concepts = data.concepts || []
       console.log('🧠 Concepts to generate from:', concepts.length)
       
       if (concepts.length === 0) {
-        alert('No concepts found for this note. Please try a different note.')
+        console.log('⚠️ No existing concepts found. Auto-extracting concepts from note text...')
+        const textToExtract = data.summary 
+          ? `${data.summary.title || ''}\n${data.summary.short_summary || ''}\n${Array.isArray(data.summary.detailed_bullets) ? data.summary.detailed_bullets.join('\n') : (data.summary.one_liner || '')}` 
+          : ''
+        
+        if (textToExtract.trim()) {
+          try {
+            const extractRes = await fetch('/api/extract-concepts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: textToExtract })
+            })
+            const extractData = await extractRes.json()
+            if (extractData.concepts && extractData.concepts.length > 0) {
+              concepts = extractData.concepts
+              // Save extracted concepts to database in background
+              const dbConcepts = concepts.map((c: any) => ({
+                summary_id: summaryId,
+                term: c.term,
+                definition: c.definition || `Key concept from ${data.summary?.title || 'note'}`,
+                difficulty: c.difficulty || 'medium'
+              }))
+              addConcepts(dbConcepts).catch((e: any) => console.error('Failed to save extracted concepts:', e))
+            }
+          } catch (err) {
+            console.error('Error auto-extracting concepts:', err)
+          }
+        }
+      }
+
+      if (concepts.length === 0) {
+        alert('Could not extract concepts for this note. Please try a different note.')
         setGenerating(false)
         return
       }

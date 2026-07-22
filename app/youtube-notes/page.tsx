@@ -111,17 +111,32 @@ export default function YouTubeNotesPage() {
           // Update result with summary ID
           setResult((prev: any) => prev ? { ...prev, summaryId: savedSummary.id } : prev)
           
-          // Save main topics as concepts
-          const concepts = notes.mainTopics.map((topic: string) => ({
+          // Save main topics & detailed bullets as concepts
+          const mainConceptList = (notes.mainTopics || []).map((topic: string, index: number) => ({
             summary_id: savedSummary.id,
             term: topic,
-            definition: `Key topic from: ${notes.title}`,
+            definition: notes.detailedBullets && notes.detailedBullets[index] 
+              ? notes.detailedBullets[index] 
+              : `Key concept covering ${topic} from ${notes.title}`,
             difficulty: 'medium' as const
           }))
 
+          const extraConceptList = (notes.detailedBullets || []).slice(mainConceptList.length, mainConceptList.length + 4).map((bullet: string, idx: number) => {
+            const words = bullet.split(' ')
+            const term = words.slice(0, 4).join(' ').replace(/[^a-zA-Z0-9 ]/g, '')
+            return {
+              summary_id: savedSummary.id,
+              term: term || `Concept ${idx + 1}`,
+              definition: bullet,
+              difficulty: 'medium' as const
+            }
+          })
+
+          const concepts = [...mainConceptList, ...extraConceptList]
+
           if (concepts.length > 0) {
             addConcepts(concepts).then(() => {
-              console.log('✅ Concepts saved')
+              console.log('✅ Concepts saved:', concepts.length)
             }).catch(err => {
               console.error('⚠️ Failed to save concepts:', err)
             })
